@@ -2,6 +2,9 @@
 
 from mod_python import apache
 
+
+apache.log_error('WLISTER Imported', apache.APLOG_DEBUG)
+
 import uuid
 import re
 
@@ -68,14 +71,14 @@ class WLRule(object):
             self.re_host = None
 
         try:
-            self.re_raw_parameters = re.compile(self.description['match']['raw_parameters'])
-        except:
-            self.re_raw_parameters = None
-
-        try:
             self.re_ip = re.compile(self.description['match']['ip'])
         except:
             self.re_ip = None
+
+        try:
+            self.re_raw_parameters = re.compile(self.description['match']['raw_parameters'])
+        except:
+            self.re_raw_parameters = None
 
         #ToDo : implement match_headers(self, request)
         self.re_headers = []
@@ -122,6 +125,14 @@ class WLRule(object):
         except:
             return False
 
+    def match_ip(self, request):
+        if self.re_ip is None:
+            return True
+        try:
+            return bool(self.re_host.match(request.remote_ip))
+        except:
+            return False
+
     def match_raw_parameters(self, request):
         if self.re_raw_parameters is None:
             return True
@@ -133,23 +144,26 @@ class WLRule(object):
         except:
             return False
 
-    def match_ip(self, request):
-        if self.re_ip is None:
-            return True
-        try:
-            return bool(self.re_host.match(request.remote_ip))
-        except:
-            return False
-
     def match_headers(self, request):
-        pass
+        if self.re_headers is None:
+            return True
+        match = True
+        for header, re_value in self.re_headers:
+            try:
+                m = re_value.match(request.headers_in[header])
+                if m is None:
+                    match = False
+            except:
+                match = False
+            if match is False:
+                break
+        return match
 
     def match_parameters(self, request):
         pass
 
-    # decorator dedicated to prepare request body to be read
-    # and handled properly within the InputFilter
-    # (or is this a design failure ?)
+    # ToDo: harden this decision maker so that it is hard
+    # to change the decision during the analysis of a request
     def _can_read_body(self, request):
         if 'wl.must_not_read_body' in request.tags:
             return False
@@ -182,6 +196,20 @@ class WLRule(object):
         pass
 
 
+def request_init(request):
+    # dealing with parameters
+    if request.args is not None:
+        request.parameters = [arg.split('=', 1) for arg in request.args.spilit('&')]
+        for parameter in request.parameters:
+            if len(parameter) == 1:
+                parameter.append('')
+
+    request.tags = set()
+    request.tags.add('wl.method.' + str(request.method).lower())
+
+    return request
+
+
 class RequestAnalyzer(object):
     def __init__(self, request, rules):
         self.rules = rules
@@ -203,18 +231,7 @@ def handler(req):
                   apache.APLOG_DEBUG)
     req.headers_in.add('X-wlister', 'TEST-WLISTER')
     req.headers_in.add('X-wlister', 'TEST2')
-    req.log_error('request.the_request ' + str(req.the_request),
-                  apache.APLOG_DEBUG)
-    req.log_error('request.method ' + str(req.method),
-                  apache.APLOG_DEBUG)
-    req.log_error('request.protocol ' + str(req.protocol),
-                  apache.APLOG_DEBUG)
-    #req.log_error('request.range ' + str(req.range), apache.APLOG_DEBUG)
-    req.log_error('request.unparsed_uri ' + str(req.unparsed_uri),
-                  apache.APLOG_DEBUG)
     req.log_error('request.uri ' + str(req.uri),
-                  apache.APLOG_DEBUG)
-    req.log_error('request.range ' + str(req.range),
                   apache.APLOG_DEBUG)
     req.log_error('request.parsed_uri ' + str(req.parsed_uri),
                   apache.APLOG_DEBUG)
