@@ -78,7 +78,6 @@ class WLRule(object):
 
         # list of method that must be used to validate a matching
         self.match_list = []
-
         # matching material and match_* functions registration
         try:
             self.re_url = re.compile(self.description['match']['url'])
@@ -144,6 +143,26 @@ class WLRule(object):
             self.prerequisite_list.append('prerequisite_has_not_tag')
         except:
             self.has_not_tag = None
+
+        #ToDo: implement def if_match_* functions
+        # list of methodes that must be used if matching is validated
+        self.action_if_match_list = []
+
+        try:
+            self.if_match_set_tag = self.description['action_if_match']['set_tag']
+            self.action_if_match_list.append('action_if_match_set_tag')
+        except:
+            self.if_match_set_tag = None
+
+        try:
+            self.if_match_unset_tag = self.description['action_if_match']['unset_tag']
+            self.action_if_match_list.append['action_if_match_unset_tag']
+        except:
+            self.if_match_unset_tag = None
+
+        try:
+            self.if_match_whitelist = self.description['action_if_match']['whitelist']
+            self.action_if_match_list.append('action_if_match_whitelist')
 
     def match_URL(self, request):
         if self.re_url is None:
@@ -214,6 +233,11 @@ class WLRule(object):
                 break
         return match
 
+    # main match function - other match_* functions are not to be called
+    def match(self, request):
+        return all([getattr(self, m)(request)
+                    for m in self.match_list])
+
     def prerequisite_has_tag(self, request):
         if self.has_tag is None:
             return True
@@ -233,6 +257,27 @@ class WLRule(object):
                 has_not_tag = False
                 break
         return has_not_tag
+
+    # main prerequisite validator
+    def prerequisite(self, request):
+        return all([getattr(self, request)
+                    for p in self.prerequisite_list])
+
+    def action_if_match_set_tag(self, request):
+        if self.if_match_set_tag is None:
+            return
+        for t in self.if_match_set_tag:
+            request.tags.add(t)
+
+    def action_if_match_unset_tag(self, request):
+        if self.if_match_unset_tag is None:
+            return
+        for t in self.if_match_unset_tag:
+            request.tags.discard(t)
+
+    def action_if_match(self):
+        for action in self.action_if_match_list:
+            getattr(self, action)(request)
 
     def analyze(self, request):
         pass
