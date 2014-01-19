@@ -1,46 +1,73 @@
 # -*- coding: utf-8
 
 from mod_python import apache
+apache.wl_rules = None
 
+apache.log_error('WLISTER Imported', apache.APLOG_ERR)
 
-apache.log_error('WLISTER Imported', apache.APLOG_DEBUG)
-
-import uuid
 import re
+import json
 
-rules = [
-    {
-        "id": "000000",
-        "match":
-        {
-            "url": "^/\d+/\d+$",
-            "protocol": "^HTTP/1\.1$",
-            "method": "^GET$",
-            "host": "^mapom.me$",
-            "raw_parameters" : "^$",
-            "ip": "^127\.0\.0\.1$",
-            "headers":
-            {
-                "Content-Type": "^application/x-www-form-urlencoded$",
-                "Host": "^mapom.me$"
-            }
-        },
-        "prerequisites":
-        {
-            "has_tag": ["tag01", "tag02"]
-        },
-        "actions_if_match":
-        {
-            "set_tag": ["tag03", "tag04"],
-            "unset_tag": ["tag01"],
-            "set_whitelisted": True
-        },
-        "actions_if_mismatch":
-        {
-            "set_tag": ["blah", "blih"]
-        }
-    }
-]
+def init_wlister(path):
+    try:
+        f = open(path)
+    except:
+        apache.log_error('Can not open configuration file - ' +
+                         str(path), apache.APLOG_ERR)
+        return False
+    try:
+        d = json.load(f)
+    except Exception as e:
+        apache.log_error('Rules format is not json compliant - ' +
+                         str(path) + ' - ' + str(e),
+                         apache.APLOG_ERR)
+        return False
+
+    if apache.wl_rules is None:
+        apache.wl_rules = {}
+
+    if path in apache.wl_rules.keys():
+        return True
+
+    apache.wl_rules[path] = []
+    for r in d:
+        apache.wl_rules[path].append(WLRule(r))
+    return True
+
+# Example of Rule format
+#rules = [
+#    {
+#        "id": "000000",
+#        "match":
+#        {
+#            "url": "^/\d+/\d+$",
+#            "protocol": "^HTTP/1\.1$",
+#            "method": "^GET$",
+#            "host": "^mapom.me$",
+#            "raw_parameters": "^$",
+#            "ip": "^127\.0\.0\.1$",
+#            "headers":
+#            {
+#                "Content-Type": "^application/x-www-form-urlencoded$",
+#                "Host": "^mapom.me$"
+#            }
+#        },
+#        "prerequisites":
+#        {
+#            "has_tag": ["tag01", "tag02"]
+#        },
+#        "actions_if_match":
+#        {
+#            "set_tag": ["tag03", "tag04"],
+#            "unset_tag": ["tag01"],
+#            "set_whitelisted": True
+#        },
+#        "actions_if_mismatch":
+#        {
+#            "set_tag": ["blah", "blih"]
+#        }
+#    }
+#]
 
 
 class WLRule(object):
@@ -48,50 +75,75 @@ class WLRule(object):
         if type(description) is not dict:
             raise TypeError("Description parameter must be a dictionary")
         self.description = description
-        # From description, building utility objects and/or functions
 
+        # list of method that must be used to validate a matching
+        self.match_list = []
+
+        # matching material and match_* functions registration
         try:
             self.re_url = re.compile(self.description['match']['url'])
+            self.match_list.append('match_URL')
         except:
             self.re_url = None
 
         try:
             self.re_protocol = re.compile(self.description['match']['protocol'])
+            self.match_list.append('match_protocol')
         except:
             self.re_protocol = None
 
         try:
             self.re_method = re.compile(self.description['match']['method'])
+            self.match_list.append('match_method')
         except:
             self.re_method = None
 
         try:
             self.re_host = re.compile(self.description['match']['host'])
+            self.match_list.append('match_host')
         except:
             self.re_host = None
 
         try:
             self.re_ip = re.compile(self.description['match']['ip'])
+            self.match_list.append('match_ip')
         except:
             self.re_ip = None
 
         try:
             self.re_raw_parameters = re.compile(self.description['match']['raw_parameters'])
+            self.match_list.append('match_raw_parameters')
         except:
             self.re_raw_parameters = None
 
-        #ToDo : implement match_headers(self, request)
         self.re_headers = []
         try:
             h = self.description['match']['headers']
+            for header, value in h:
+                try:
+                    self.re_headers.append((header, re.compile(value)))
+                except:
+                    apache.log_error('Regex compilation error (' + str(header)
+                                     + ', ' + str(value) + ') - skipping',
+                                     apache.APLOG_ERR)
+            self.match_list.append('match_headers')
         except:
             self.re_headers = None
-        for header, value in h:
-            try:
-                self.re_headers.append((header, re.compile(value)))
-            except:
-                self.re_headers = None
-                break
+
+        # list of method that must be used to validate prerequisites
+        self.prerequisite_list = []
+        # prerequisites material and prerequisites_* function registration
+        try:
+            self.has_tag = self.description['prerequisite']['has_tag']
+            self.prerequisite_list.append('prerequisite_has_tag')
+        except:
+            self.has_tag = None
+
+        try:
+            self.has_not_tag = self.description['prerequisite']['has_not_tag']
+            self.prerequisite_list.append('prerequisite_has_not_tag')
+        except:
+            self.has_not_tag = None
 
     def match_URL(self, request):
         if self.re_url is None:
@@ -144,11 +196,14 @@ class WLRule(object):
         except:
             return False
 
+    # ToDo: change function so that it can handle the
+    # double header behavior that provides tuple instead of string
     def match_headers(self, request):
         if self.re_headers is None:
             return True
         match = True
         for header, re_value in self.re_headers:
+            # Todo: use header in r.headers_in statement
             try:
                 m = re_value.match(request.headers_in[header])
                 if m is None:
@@ -159,117 +214,72 @@ class WLRule(object):
                 break
         return match
 
-    def match_parameters(self, request):
-        pass
-
-    # ToDo: harden this decision maker so that it is hard
-    # to change the decision during the analysis of a request
-    def _can_read_body(self, request):
-        if 'wl.must_not_read_body' in request.tags:
-            return False
-        else:
+    def prerequisite_has_tag(self, request):
+        if self.has_tag is None:
             return True
-        # - read body if authorized
-        # - let body content being re-attached to the request
-        # - hook up proper input filter to handle body content
-        # (request.add_input_filter(filter_name))
-        pass
+        has_tag = True
+        for tag in self.has_tag:
+            if tag not in request.tags:
+                has_tag = False
+                break
+        return has_tag
 
-    def _read_body(self, request):
-        if not self._can_read_body(request):
-            return False
-        if request.body is not None:
+    def prerequisite_has_not_tag(self, request):
+        if self.has_not_tag is None:
             return True
-        request.body = request.read()
-        return True
+        has_not_tag = True
+        for tag in self.has_not_tag:
+            if tag in request.tags:
+                has_not_tag = False
+                break
+        return has_not_tag
 
-    def match_body_raw(request):
-        pass
-
-    def match_body_as_parameters(request):
-        pass
-
-    def match_body_as_json(request):
-        pass
-
-    def match_body_length(request):
+    def analyze(self, request):
         pass
 
 
 def request_init(request):
+    request.wl_tags = set()
+    request.wl_whitelisted = False
+
     # dealing with parameters
     if request.args is not None:
-        request.parameters = [arg.split('=', 1) for arg in request.args.spilit('&')]
+        request.wl_tags.add('wl.has_parameters')
+        request.parameters = [arg.split('=', 1)
+                              for arg in request.args.split('&')]
         for parameter in request.parameters:
             if len(parameter) == 1:
                 parameter.append('')
 
-    request.tags = set()
-    request.tags.add('wl.method.' + str(request.method).lower())
+    # dealing with method
+    if request.method is not None:
+        request.wl_tags.add('wl.method.' + str(request.method).lower())
+    else:
+        request.wl_tags.add('wl.method.None')
 
-    return request
-
-
-class RequestAnalyzer(object):
-    def __init__(self, request, rules):
-        self.rules = rules
-        self.request = request
-        self.request.tags = set()
-
-        if self.request.method is not None and len(self.request.method) != 0:
-            self.tags.add(self.request.method)
-        if self.request.protocol is not None:
-            self.tags.add(self.request.protocol)
-        if self.request.args is not None:
-            self.tags.add('has_args')
-        self.request.wl_continue_analysis = True
-        self.request.wl_whitelisted = False
+    # dealing with content-length if any
+    if 'Content-Length' in request.headers_in:
+        request.wl_tags.add('wl.has_body')
 
 
 def handler(req):
-    req.log_error('--------------- START OF HANDLER -----------------',
-                  apache.APLOG_DEBUG)
-    req.headers_in.add('X-wlister', 'TEST-WLISTER')
-    req.headers_in.add('X-wlister', 'TEST2')
-    req.log_error('request.uri ' + str(req.uri),
-                  apache.APLOG_DEBUG)
-    req.log_error('request.parsed_uri ' + str(req.parsed_uri),
-                  apache.APLOG_DEBUG)
-    req.log_error('request.args ' + str(req.args),
-                  apache.APLOG_DEBUG)
-    req.body = req.read()
-    #req.notes.add('body', req.read())
-    #req.log_error('request.body ' + str(req.body),
-    #              apache.APLOG_DEBUG)
-    req.log_error('req.main ' + str(req.main),
-                  apache.APLOG_DEBUG)
-    req.log_error('req.headers_in ' + str(req.headers_in),
-                  apache.APLOG_DEBUG)
-    req.log_error('req.headers_out ' + str(req.headers_out),
-                  apache.APLOG_DEBUG)
-    req.log_error('req.content_type ' + str(req.content_type),
-                  apache.APLOG_DEBUG)
-    req.uuid = uuid.uuid4()
-    req.log_error('req.uuid ' + str(req.uuid),
-                  apache.APLOG_DEBUG)
-    req.log_error('req.get_options() ' + str(req.get_options()),
-                  apache.APLOG_DEBUG)
-    req.log_error('req.useragent_addr ' + str(req.connection.remote_ip),
-                  apache.APLOG_DEBUG)
+    request_init(req)
 
     try:
-        req.content_length = int(req.headers_in['Content-Length'])
+        config = req.get_options()['wlister.conf']
     except:
-        req.content_length = 0
-    req.log_error('req.content_length ' + str(req.content_length),
-                  apache.APLOG_DEBUG)
+        apache.log_error('Can not find PythonOption: wlister.conf \
+                         - can not analyze request',
+                         apache.APLOG_CRIT)
+        return apache.DECLINED
 
-    for h in req.headers_in:
-        req.log_error(str(h) + ' - ' + str(req.headers_in[h]),
-                      apache.APLOG_DEBUG)
+    if not init_wlister(config):
+        apache.log_error('Can not process request without configuration',
+                         apache.APLOG_CRIT)
+        return apache.DECLINED
 
-    req.log_error('--------------- END OF HANDLER -----------------',
-                  apache.APLOG_DEBUG)
+    for rule in apache.wl_rules[config]:
+        pass
 
     return apache.OK
 

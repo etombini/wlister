@@ -12,8 +12,6 @@ class SimpleTest(unittest.TestCase):
         r = requests.get('http://localhost:5000')
         self.assertEqual(r.status_code, 200)
 
-    def test_pass(self):
-        self.assertEqual(10, 7 + 3)
-
-    def test_fail(self):
-        self.assertEqual(10, 7 + 3)
+    def test_proxy_ok(self):
+        r = requests.get('http://localhost/')
+        self.assertEqual(r.status_code, 200)
