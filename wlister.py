@@ -1,37 +1,85 @@
-# -*- coding: utf-8
+# -*- coding: utf-8 -*-
 
 from mod_python import apache
-apache.wl_rules = None
 
-apache.log_error('WLISTER Imported', apache.APLOG_ERR)
+apache.wl_rules = None
+apache.wl_config = None
+
+apache.log_error('WLISTER Imported', apache.APLOG_CRIT)
 
 import re
 import json
 
-def init_wlister(path):
+
+def log(message, log_level=None):
     try:
-        f = open(path)
+        apache.log_error(apache.wl_config['wlister.log_prefix'] +
+                         ' ' + message, apache.APLOG_CRIT)
     except:
-        apache.log_error('Can not open configuration file - ' +
-                         str(path), apache.APLOG_ERR)
-        return False
-    try:
-        d = json.load(f)
-    except Exception as e:
-        apache.log_error('Rules format is not json compliant - ' +
-                         str(path) + ' - ' + str(e),
-                         apache.APLOG_ERR)
-        return False
+        apache.log_error(message, apache.APLOG_CRIT)
 
-    if apache.wl_rules is None:
-        apache.wl_rules = {}
 
-    if path in apache.wl_rules.keys():
+# ToDo: put init_wlister into this function !
+def init_wlister(request):
+    """
+    Initialize wlister parameters from apache configuration
+    Paramaters are:
+        - wlister.log_prefix: prefix to prepend to wlister log entries
+        - wlister.default_action: default action at the end of rules testing
+        when no directive applied (see WLRules.action_if_match* and
+        WLRules.action_if_mismatch*)
+        - wlister.conf: file path describing the rules to be applied
+    """
+    if apache.wl_config is not None:
         return True
+    apache.wl_config = {}
+    apache.wl_rules = []
+    options = request.get_options()
 
-    apache.wl_rules[path] = []
-    for r in d:
-        apache.wl_rules[path].append(WLRule(r))
+    try:
+        apache.wl_config['wlister.log_prefix'] = options['wlister.log_prefix']
+    except:
+        apache.wl_config['wlister.log_prefix'] = '[wlister]'
+
+    try:
+        if options['wlister.default_action'] in ['block', 'pass', 'learn']:
+            apache.wl_config['wlister.default_action'] = \
+                options['wlister.default_action']
+        else:
+            apache.wl_config['wlister.default_action'] = 'block'
+            log('unknown value for wlister.default_action (lock, pass, learn)')
+            log('default action is ' +
+                apache.wl_config['wlister.default_action'])
+    except:
+        apache.wl_config['wlister.default_action'] = 'block'
+        log('wlister.default_action not defined')
+        log('default action is ' +
+            apache.wl_config['wlister.default_action'])
+
+    try:
+        apache.wl_config['wlister.conf'] = options['wlister.conf']
+    except:
+        apache.wl_config['wlister.conf'] = None
+        log('wlister.conf is not set - can not analyze request')
+
+    if apache.wl_config['wlister.conf'] is not None:
+        f = None
+        try:
+            f = open(apache.wl_config['wlister.conf'])
+        except:
+            log('Can not open configuration file (wlister.conf) - ' +
+                str(apache.wl_config['wlister.conf']))
+        if f is not None:
+            d = None
+            try:
+                d = json.load(f)
+            except Exception as e:
+                log('Rules format is not json compliant - ' +
+                    str(apache.wl_config['wlister.conf']) +
+                    str(e))
+            if d is not None:
+                for r in d:
+                    apache.wl_rules.append(WLRule(r))
     return True
 
 # Example of Rule format
@@ -75,7 +123,12 @@ class WLRule(object):
         if type(description) is not dict:
             raise TypeError("Description parameter must be a dictionary")
         self.description = description
+        self.init_match()
+        self.init_prerequisite()
+        self.init_action_if_match()
+        self.init_action_if_mismatch()
 
+    def init_match(self):
         # list of method that must be used to validate a matching
         self.match_list = []
         # matching material and match_* functions registration
@@ -86,13 +139,15 @@ class WLRule(object):
             self.re_url = None
 
         try:
-            self.re_protocol = re.compile(self.description['match']['protocol'])
+            self.re_protocol = \
+                re.compile(self.description['match']['protocol'])
             self.match_list.append('match_protocol')
         except:
             self.re_protocol = None
 
         try:
-            self.re_method = re.compile(self.description['match']['method'])
+            self.re_method = \
+                re.compile(self.description['match']['method'])
             self.match_list.append('match_method')
         except:
             self.re_method = None
@@ -110,7 +165,8 @@ class WLRule(object):
             self.re_ip = None
 
         try:
-            self.re_raw_parameters = re.compile(self.description['match']['raw_parameters'])
+            self.re_raw_parameters = \
+                re.compile(self.description['match']['raw_parameters'])
             self.match_list.append('match_raw_parameters')
         except:
             self.re_raw_parameters = None
@@ -122,13 +178,14 @@ class WLRule(object):
                 try:
                     self.re_headers.append((header, re.compile(value)))
                 except:
-                    apache.log_error('Regex compilation error (' + str(header)
-                                     + ', ' + str(value) + ') - skipping',
-                                     apache.APLOG_ERR)
+                    apache.log_error('Regex compilation error (' +
+                                     str(header) + ', ' + str(value) +
+                                     ') - skipping', apache.APLOG_ERR)
             self.match_list.append('match_headers')
         except:
             self.re_headers = None
 
+    def init_prerequisite(self):
         # list of method that must be used to validate prerequisites
         self.prerequisite_list = []
         # prerequisites material and prerequisites_* function registration
@@ -144,25 +201,77 @@ class WLRule(object):
         except:
             self.has_not_tag = None
 
-        #ToDo: implement def if_match_* functions
+    def init_action_if_match(self):
         # list of methodes that must be used if matching is validated
         self.action_if_match_list = []
-
+        # if_match material and if_match_* function registration
         try:
-            self.if_match_set_tag = self.description['action_if_match']['set_tag']
+            self.if_match_set_tag = \
+                self.description['action_if_match']['set_tag']
+            if type(self.if_match_set_tag) is not list:
+                self.if_match_set_tag = [self.if_match_set_tag]
             self.action_if_match_list.append('action_if_match_set_tag')
         except:
             self.if_match_set_tag = None
 
         try:
-            self.if_match_unset_tag = self.description['action_if_match']['unset_tag']
+            self.if_match_unset_tag = \
+                self.description['action_if_match']['unset_tag']
+            if type(self.if_match_unset_tag) is not list:
+                self.if_match_unset_tag = [self.if_match_unset_tag]
             self.action_if_match_list.append['action_if_match_unset_tag']
         except:
             self.if_match_unset_tag = None
 
         try:
-            self.if_match_whitelist = self.description['action_if_match']['whitelist']
+            self.if_match_whitelist = \
+                self.description['action_if_match']['whitelist']
             self.action_if_match_list.append('action_if_match_whitelist')
+        except:
+            self.if_match_whitelist = None
+
+        try:
+            self.if_match_blacklist = \
+                self.description['action_if_match']['blacklist']
+            self.action_if_match_list.append('action_if_match_blacklist')
+        except:
+            self.if_match_blacklist = None
+
+    def init_action_if_mismatch(self):
+        # list of methods that must be used if matching is not validated
+        self.action_if_mismatch_list = []
+        # if_mismatch material and if_mismatch_* function registration
+        try:
+            self.if_mismatch_set_tag = \
+                self.description['action_if_mismatch']['set_tag']
+            if type(self.if_mismatch_set_tag) is not list:
+                self.if_mismatch_set_tag = [self.if_mismatch_set_tag]
+            self.action_if_mismatch_list.append('action_if_mismatch_set_tag')
+        except:
+            self.if_mismatch_set_tag = None
+
+        try:
+            self.if_mismatch_unset_tag = \
+                self.description['action_if_mismatch']['unset_tag']
+            if type(self.if_mismatch_unset_tag) is not list:
+                self.if_mismatch_unset_tag = [self.if_mismatch_unset_tag]
+            self.action_if_mismatch_list.append('action_if_mismatch_unset_tag')
+        except:
+            self.if_mismatch_unset_tag = None
+
+        try:
+            self.if_mismatch_whitelist = \
+                self.description['action_if_mismatch']['whitelist']
+            self.action_if_mismatch_list.append('action_if_mismatch_whitelist')
+        except:
+            self.if_mismatch_whitelist = None
+
+        try:
+            self.if_mismatch_blacklist = \
+                self.description['action_if_mismatch']['blacklist']
+            self.action_if_mismatch_list.append('action_if_mismatch_blacklist')
+        except:
+            self.if_mismatch_blacklist = None
 
     def match_URL(self, request):
         if self.re_url is None:
@@ -243,7 +352,7 @@ class WLRule(object):
             return True
         has_tag = True
         for tag in self.has_tag:
-            if tag not in request.tags:
+            if tag not in request.wl_tags:
                 has_tag = False
                 break
         return has_tag
@@ -253,39 +362,107 @@ class WLRule(object):
             return True
         has_not_tag = True
         for tag in self.has_not_tag:
-            if tag in request.tags:
+            if tag in request.wl_tags:
                 has_not_tag = False
                 break
         return has_not_tag
 
     # main prerequisite validator
     def prerequisite(self, request):
-        return all([getattr(self, request)
+        return all([getattr(self, p)(request)
                     for p in self.prerequisite_list])
 
     def action_if_match_set_tag(self, request):
         if self.if_match_set_tag is None:
             return
         for t in self.if_match_set_tag:
-            request.tags.add(t)
+            request.wl_tags.add(t)
 
     def action_if_match_unset_tag(self, request):
         if self.if_match_unset_tag is None:
             return
         for t in self.if_match_unset_tag:
-            request.tags.discard(t)
+            request.wl_tags.discard(t)
 
-    def action_if_match(self):
+    def action_if_match_whitelist(self, request):
+        if self.if_match_whitelist is None:
+            request.wl_whitelisted = False
+            return
+        if self.if_match_whitelist == 'True':
+            request.wl_whitelisted = True
+            return
+        if self.if_match_whitelist == 'False':
+            request.wl_whitelisted = False
+            return
+
+    def action_if_match_blacklist(self, request):
+        if self.if_match_blacklist is None:
+            request.wl_blacklisted = False
+            return
+        if self.if_match_blacklist == 'True':
+            request.wl_blacklisted = True
+            return
+        if self.if_match_blacklist == 'False':
+            request.wl_blacklisted = False
+            return
+
+    # main action_if_match hook
+    def action_if_match(self, request):
         for action in self.action_if_match_list:
             getattr(self, action)(request)
 
+    def action_if_mismatch_set_tag(self, request):
+        if self.if_mismatch_set_tag is None:
+            return
+        for t in self.if_mismatch_set_tag:
+            request.wl_tags.add(t)
+
+    def action_if_mismatch_unset_tag(self, request):
+        if self.if_mismatch_unset_tag is None:
+            return
+        for t in self.if_mismatch_unset_tag:
+            request.wl_tags.discard(t)
+
+    def action_if_mismatch_whitelist(self, request):
+        if self.if_mismatch_whitelist is None:
+            request.wl_whitelisted = False
+            return
+        if self.if_mismatch_whitelist == 'True':
+            request.wl_whitelisted = True
+            return
+        if self.if_mismatch_whitelist == 'False':
+            request.wl_whitelisted = False
+            return
+
+    def action_if_mismatch_blacklist(self, request):
+        if self.if_mismatch_blacklist is None:
+            request.wl_blacklisted = False
+            return
+        if self.if_mismatch_blacklist == 'True':
+            request.wl_blacklisted = True
+            return
+        if self.if_mismatch_blacklist == 'False':
+            request.wl_blacklisted = False
+            return
+
+    # main action_if_mismatch hook
+    def action_if_mismatch(self, request):
+        for action in self.action_if_mismatch_list:
+            getattr(self, action)(request)
+
     def analyze(self, request):
-        pass
+        if not self.prerequisite(request):
+            return
+        if self.match(request):
+            self.action_if_match(request)
+        else:
+            self.action_if_mismatch(request)
 
 
 def request_init(request):
     request.wl_tags = set()
     request.wl_whitelisted = False
+    request.wl_blacklisted = False
 
     # dealing with parameters
     if request.args is not None:
@@ -309,22 +486,20 @@ def request_init(request):
 
 def handler(req):
     request_init(req)
+    init_wlister(req)
 
-    try:
-        config = req.get_options()['wlister.conf']
-    except:
-        apache.log_error('Can not find PythonOption: wlister.conf \
-                         - can not analyze request',
-                         apache.APLOG_CRIT)
-        return apache.DECLINED
+    for rule in apache.wl_rules:
+        rule.analyze(req)
+        if req.wl_whitelisted:
+            return apache.OK
+        if req.wl_blacklisted:
+            return apache.HTTP_NOT_FOUND
 
-    if not init_wlister(config):
-        apache.log_error('Can not process request without configuration',
-                         apache.APLOG_CRIT)
-        return apache.DECLINED
-
-    for rule in apache.wl_rules[config]:
-        pass
+    default_action = apache.wl_config['wlister.default_action']
+    if default_action == 'block':
+        return apache.HTTP_NOT_FOUND
+    elif default_action == 'pass':
+        return apache.OK
 
     return apache.OK
 
