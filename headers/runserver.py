@@ -5,9 +5,24 @@ from flask import Flask, render_template, request
 app = Flask('headers', template_folder='templates')
 
 
+@app.errorhandler(404)
+def page_not_found(error):
+    return '404'
+
+
 @app.route('/')
 def index():
     return "OK"
+
+
+@app.route('/int/<int:value>')
+def index01(value):
+    return "OK"
+
+
+@app.route('/abc')
+def index02():
+    return "MUST BE BLACKLISTED"
 
 
 @app.route('/<arg1>/<arg2>', methods=['GET', 'POST', 'HEAD', 'PUT', 'DELETE'])
