@@ -132,12 +132,23 @@ class WLRule(object):
         # list of method that must be used to validate a matching
         self.match_list = []
         # matching material and match_* functions registration
+        self.init_match_url()
+        self.init_match_protocol()
+        self.init_match_method()
+        self.init_match_host()
+        self.init_match_ip()
+        self.init_match_raw_parameters()
+        self.init_match_headers()
+        self.init_match_parameters()
+
+    def init_match_url(self):
         try:
             self.re_url = re.compile(self.description['match']['url'])
             self.match_list.append('match_URL')
         except:
             self.re_url = None
 
+    def init_match_protocol(self):
         try:
             self.re_protocol = \
                 re.compile(self.description['match']['protocol'])
@@ -145,6 +156,7 @@ class WLRule(object):
         except:
             self.re_protocol = None
 
+    def init_match_method(self):
         try:
             self.re_method = \
                 re.compile(self.description['match']['method'])
@@ -152,18 +164,21 @@ class WLRule(object):
         except:
             self.re_method = None
 
+    def init_match_host(self):
         try:
             self.re_host = re.compile(self.description['match']['host'])
             self.match_list.append('match_host')
         except:
             self.re_host = None
 
+    def init_match_ip(self):
         try:
             self.re_ip = re.compile(self.description['match']['ip'])
             self.match_list.append('match_ip')
         except:
             self.re_ip = None
 
+    def init_match_raw_parameters(self):
         try:
             self.re_raw_parameters = \
                 re.compile(self.description['match']['raw_parameters'])
@@ -171,6 +186,22 @@ class WLRule(object):
         except:
             self.re_raw_parameters = None
 
+    def init_match_parameters(self):
+        self.re_parameters = []
+        try:
+            p = self.description['match']['parameters']
+            for parameter, value in p:
+                try:
+                    self.re_parameters.append((parameter,
+                                               re.compile(value)))
+                except:
+                    log('match:parameters regex compilation error - (' +
+                        str(parameter) + ', ' + str(value) + ') - skipping')
+            self.match_list.append('match_parameters')
+        except:
+            self.re_parameters = None
+
+    def init_match_headers(self):
         self.re_headers = []
         try:
             h = self.description['match']['headers']
@@ -324,6 +355,26 @@ class WLRule(object):
         except:
             return False
 
+    def match_parameters(self, request):
+        # all parameters must match, exctly
+        if self.re_parameters is None:
+            return True
+        if request.wl_parameters is None:
+            return False
+        if len(request.wl_parameters) != len(self.re_parameters):
+            return False
+        parameters = []
+        for p, v in request.wl_parameters:
+            parameters.append([p, v, False])
+        # iteration on self.re_parameters first ensure 1 pattern matches
+        # only 1 parameter
+        for name, re in self.re_parameters:
+            for p in parameters:
+                if p[2] is False and name == p[0] and re.match(p[1]):
+                    p[2] = True
+                    break
+        return all([p[2] for p in parameters])
+
     # ToDo: change function so that it can handle the
     # double header behavior that provides tuple instead of string
     def match_headers(self, request):
@@ -467,11 +518,13 @@ def request_init(request):
     # dealing with parameters
     if request.args is not None:
         request.wl_tags.add('wl.has_parameters')
-        request.parameters = [arg.split('=', 1)
-                              for arg in request.args.split('&')]
-        for parameter in request.parameters:
+        request.wl_parameters = [arg.split('=', 1)
+                                 for arg in request.args.split('&')]
+        for parameter in request.wl_parameters:
             if len(parameter) == 1:
                 parameter.append('')
+    else:
+        request.wl_parameters = None
 
     # dealing with method
     if request.method is not None:
