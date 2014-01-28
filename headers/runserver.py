@@ -34,5 +34,10 @@ def page01(arg1, arg2):
                            arg2=arg2)
 
 
+@app.route('/parameters')
+def page02():
+    return "OK"
+
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)
