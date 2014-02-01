@@ -18,12 +18,12 @@ class SimpleTest(unittest.TestCase):
         self.assertEqual(r.status_code, 200,
                          'Proxy service is not running properly')
 
-    def test_01(self):
+    def test_dummy_uri(self):
         r = requests.get('http://localhost/abc')
         self.assertEqual(r.status_code, 404,
                          'Filtering service not working')
 
-    def test_02(self):
+    def test_whitelisted_uri(self):
         r = requests.get('http://localhost/int/123')
         self.assertEqual(r.status_code, 200)
 
@@ -41,26 +41,26 @@ class SimpleTest(unittest.TestCase):
     #        "whitelist": "True"
     #    }
     #}
-    def test_03(self):
+    def test_parameters_03(self):
         r = requests.get('http://localhost/parameters?var1=val1&var2=val2')
         self.assertEqual(r.status_code, 200)
 
-    def test_04(self):
+    def test_parameters_04(self):
         r = requests.get('http://localhost/parameters?var2=val2&var1=val1')
         self.assertEqual(r.status_code, 200)
 
-    def test_05(self):
+    def test_parameters_05(self):
         r = requests.get('http://localhost/parameters?var2=val2&var1=val1')
         self.assertEqual(r.status_code, 200)
 
-    def test_06(self):
+    def test_parameters_06(self):
         r = requests.get('http://localhost/parameters?var2=val2')
         self.assertEqual(r.status_code, 404)
 
-    def test_07(self):
+    def test_parameters_07(self):
         r = requests.get('http://localhost/parameters?var1=ValueNotExpected&var2=val2')
         self.assertEqual(r.status_code, 404)
 
-    def test_08(self):
+    def test_parameters_08(self):
         r = requests.get('http://localhost/parameters?var1=val1&var2=val2&UnexpectedParameter=whatever')
         self.assertEqual(r.status_code, 404)
