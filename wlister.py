@@ -3,6 +3,7 @@
 from mod_python import apache
 import json
 from wlrule import WLRule
+from wlrequest import WLRequest
 
 apache.wl_rules = None
 apache.wl_config = None
@@ -94,81 +95,17 @@ def init_rules():
         apache.wl_rules.append(WLRule(r, log))
 
 
-def init_request_parameters(request):
-    # dealing with parameters
-    if request.args is not None:
-        request.wl_tags.add('wl.has_parameters')
-        request.wl_parameters = [arg.split('=', 1)
-                                 for arg in request.args.split('&')]
-        for parameter in request.wl_parameters:
-            if len(parameter) == 1:
-                parameter.append('')
-    else:
-        request.wl_parameters = None
-
-
-def init_request_method(request):
-    # dealing with method
-    if request.method is not None:
-        request.wl_tags.add('wl.method.' + str(request.method).lower())
-    else:
-        request.wl_tags.add('wl.method.None')
-
-
-def init_request_body(request):
-    # dealing with content-length if any
-    if 'Content-Length' in request.headers_in:
-        request.wl_tags.add('wl.has_body')
-        request.body_size = int(request.headers_in['Content-Length'])
-    else:
-        request.body_size = 0
-
-    max_size = int(apache.wl_config['wlister.max_post_read'])
-    if request.wl_body_size > max_size:
-        log('request body length (' + str(request.wl_body_size) +
-            ') is greater than wlister.max_post_read (' +
-            str(max_size) + ') - skipping body analyis')
-    elif request.wl_body_size > 0:
-        try:
-            request.register_input_filter('wlister.pass_filter',
-                                          'wlister::input_filter')
-            request.add_input_filter('wlister.pass_filter')
-            request.wl_body_raw = request.read(request.wl_body_size)
-            request.wl_body_parameters = \
-                [arg.split('=', 1) for arg in request.wl_body_raw.split['&']]
-            for parameter in request.wl_body_parameters:
-                if len(parameter) == 1:
-                    parameter.append('')
-        except IOError:
-            log('reading request body failed - TimeOut may be reached - ' +
-                'request processing is unknown')
-    else:
-        request.wl_tag_add('wl.bad_content_length')
-        log('Request Content-Length is lower than 0 ?!')
-
-
-def init_request(request):
-    request.wl_tags = set()
-    request.wl_whitelisted = False
-    request.wl_blacklisted = False
-    init_request_parameters(request)
-    init_request_method(request)
-    init_request_body(request)
-
-
-def init(request):
-    init_config(request)
-    init_rules()
-    init_request(request)
-
-
 def handler(req):
-    init(req)
+    init_config(req)
+    init_rules()
+    wlrequest = WLRequest(req, log=log)
+    log(str(wlrequest))
+
     for rule in apache.wl_rules:
-        rule.analyze(req)
-        if req.wl_whitelisted:
+        rule.analyze(wlrequest)
+        if wlrequest.whitelisted:
             return apache.OK
-        if req.wl_blacklisted:
+        if wlrequest.blacklisted:
             return apache.HTTP_NOT_FOUND
 
     default_action = apache.wl_config['wlister.default_action']

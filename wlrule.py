@@ -185,12 +185,12 @@ class WLRule(object):
         # all parameters must match, exctly
         if self.re_parameters is None:
             return True
-        if request.wl_parameters is None:
+        if request.parameters is None:
             return False
-        if len(request.wl_parameters) != len(self.re_parameters):
+        if len(request.parameters) != len(self.re_parameters):
             return False
         parameters = []
-        for p, v in request.wl_parameters:
+        for p, v in request.parameters:
             parameters.append([p, v, False])
         # iteration on self.re_parameters first ensure 1 pattern matches
         # only 1 parameter
@@ -229,7 +229,7 @@ class WLRule(object):
             return True
         has_tag = True
         for tag in self.has_tag:
-            if tag not in request.wl_tags:
+            if tag not in request.tags:
                 has_tag = False
                 break
         return has_tag
@@ -239,7 +239,7 @@ class WLRule(object):
             return True
         has_not_tag = True
         for tag in self.has_not_tag:
-            if tag in request.wl_tags:
+            if tag in request.tags:
                 has_not_tag = False
                 break
         return has_not_tag
@@ -253,34 +253,34 @@ class WLRule(object):
         if self.if_match_set_tag is None:
             return
         for t in self.if_match_set_tag:
-            request.wl_tags.add(t)
+            request.tags.add(t)
 
     def action_if_match_unset_tag(self, request):
         if self.if_match_unset_tag is None:
             return
         for t in self.if_match_unset_tag:
-            request.wl_tags.discard(t)
+            request.tags.discard(t)
 
     def action_if_match_whitelist(self, request):
         if self.if_match_whitelist is None:
-            request.wl_whitelisted = False
+            request.whitelisted = False
             return
         if self.if_match_whitelist == 'True':
-            request.wl_whitelisted = True
+            request.whitelisted = True
             return
         if self.if_match_whitelist == 'False':
-            request.wl_whitelisted = False
+            request.whitelisted = False
             return
 
     def action_if_match_blacklist(self, request):
         if self.if_match_blacklist is None:
-            request.wl_blacklisted = False
+            request.blacklisted = False
             return
         if self.if_match_blacklist == 'True':
-            request.wl_blacklisted = True
+            request.blacklisted = True
             return
         if self.if_match_blacklist == 'False':
-            request.wl_blacklisted = False
+            request.blacklisted = False
             return
 
     # main action_if_match hook
@@ -292,34 +292,34 @@ class WLRule(object):
         if self.if_mismatch_set_tag is None:
             return
         for t in self.if_mismatch_set_tag:
-            request.wl_tags.add(t)
+            request.tags.add(t)
 
     def action_if_mismatch_unset_tag(self, request):
         if self.if_mismatch_unset_tag is None:
             return
         for t in self.if_mismatch_unset_tag:
-            request.wl_tags.discard(t)
+            request.tags.discard(t)
 
     def action_if_mismatch_whitelist(self, request):
         if self.if_mismatch_whitelist is None:
-            request.wl_whitelisted = False
+            request.whitelisted = False
             return
         if self.if_mismatch_whitelist == 'True':
-            request.wl_whitelisted = True
+            request.whitelisted = True
             return
         if self.if_mismatch_whitelist == 'False':
-            request.wl_whitelisted = False
+            request.whitelisted = False
             return
 
     def action_if_mismatch_blacklist(self, request):
         if self.if_mismatch_blacklist is None:
-            request.wl_blacklisted = False
+            request.blacklisted = False
             return
         if self.if_mismatch_blacklist == 'True':
-            request.wl_blacklisted = True
+            request.blacklisted = True
             return
         if self.if_mismatch_blacklist == 'False':
-            request.wl_blacklisted = False
+            request.blacklisted = False
             return
 
     # main action_if_mismatch hook

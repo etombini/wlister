@@ -20,6 +20,9 @@ class WLRequest(object):
         self.init_body_content()
         self.init_body_content_type()
 
+    def __repr__(self):
+        return '<WLRequest %s>' % self.request.the_request
+
     def log_nothing(self, message):
         pass
 
