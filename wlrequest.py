@@ -27,7 +27,7 @@ class WLRequest(object):
         pass
 
     def __getattr__(self, key):
-        if key in ['uri', 'protocol', 'method', 'host', 'remote_ip', 'args']:
+        if key in ['uri', 'protocol', 'method', 'host', 'args']:
             return getattr(self.request, key)
         else:
             raise AttributeError(key)
@@ -58,6 +58,7 @@ class WLRequest(object):
                 int(self.request.headers_in['Content-Length'])
         else:
             self.content_length = 0
+            self.max_body_size = 0
             return
 
         if self.content_length > self.max_body_size:

@@ -5,7 +5,7 @@ import re
 
 class WLRule(object):
     attributes = ('uri', 'protocol', 'method',
-                  'host', 'remote_ip', 'args')
+                  'host', 'args')
 
     def __init__(self, description, log=None):
         # list of method that must be used to validate a matching
