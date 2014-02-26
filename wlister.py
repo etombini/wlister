@@ -85,7 +85,12 @@ def init_rules():
         return
     d = None
     try:
-        d = json.load(f)
+        j = ''
+        for l in f:
+            if l[0] == '#':
+                continue
+            j = j + l
+        d = json.loads(j)
     except Exception as e:
         log('Rules format is not json compliant - ' +
             str(apache.wl_config['wlister.conf']) +
