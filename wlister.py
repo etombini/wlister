@@ -103,7 +103,8 @@ def init_rules():
 def handler(req):
     init_config(req)
     init_rules()
-    wlrequest = WLRequest(req, log=log)
+    wlrequest = WLRequest(req, log=log,
+                          max_content_length=int(apache.wl_config['wlister.max_post_read']))
     log(str(wlrequest))
 
     for rule in apache.wl_rules:
@@ -138,7 +139,8 @@ def input_filter(filter):
     #if filter.req.body is not None:
     #    filter.write(filter.req.body)
     try:
-        filter.write(filter.req.body_raw)
+        filter.write(filter.req.body)
+        log("REQUEST BODY FOUND " + str(filter.req.body))
     except AttributeError:
         log('request raw body is not defined')
     finally:
