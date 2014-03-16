@@ -64,3 +64,28 @@ class SimpleTest(unittest.TestCase):
     def test_parameters_08(self):
         r = requests.get('http://localhost/parameters?var1=val1&var2=val2&UnexpectedParameter=whatever')
         self.assertEqual(r.status_code, 404)
+
+    def test_content_url_encoded_09(self):
+        content = {"var1": "val1", "var2": "val2"}
+        r = requests.post('http://localhost/post/', data=content)
+        self.assertEqual(r.status_code, 200)
+
+    def test_content_url_encoded_10(self):
+        content = {"var2": "val2", "var1": "val1"}
+        r = requests.post('http://localhost/post/', data=content)
+        self.assertEqual(r.status_code, 200)
+
+    def test_content_url_encoded_11(self):
+        content = {"var1": "val1"}
+        r = requests.post('http://localhost/post/', data=content)
+        self.assertEqual(r.status_code, 404)
+
+    def test_content_url_encoded_12(self):
+        content = {"var1": "UnexpectedValue", "var2": "val2"}
+        r = requests.post('http://localhost/post/', data=content)
+        self.assertEqual(r.status_code, 404)
+
+    def test_content_url_encoded_13(self):
+        content = {"var1": "val1", "var2": "val2", "UnexpectedParamter": "whatever"}
+        r = requests.post('http://localhost/post/', data=content)
+        self.assertEqual(r.status_code, 404)
