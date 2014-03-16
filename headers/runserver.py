@@ -39,5 +39,19 @@ def page02():
     return "OK"
 
 
+@app.route('/post/', methods=['POST'])
+def page03():
+    # must get url encoded parameters var1=val1&var2=val2 exactly
+    # anything else must return an awful error
+    if len(request.form) != 2:
+        return "KO - not only 2 parameters - " + str(request.form)
+    try:
+        if request.form['var1'] != 'val1':
+            return
+    except:
+        return "oups"
+    r = "OK - " + str(request.form)
+    return r
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)
