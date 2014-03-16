@@ -29,6 +29,14 @@ class WLRule(object):
         self.init_action_if_match()
         self.init_action_if_mismatch()
 
+    def init_match(self):
+        for attribute in self.attributes:
+            self.init_match_attribute(attribute)
+        # matching material and match_* functions registration
+        self.init_match_headers()
+        self.init_match_parameters()
+        self.init_match_content_url_encoded()
+
     def init_match_attribute(self, attribute):
         try:
             c_regex = re.compile(self.description['match'][attribute])
@@ -55,13 +63,6 @@ class WLRule(object):
             setattr(self, 'match_' + attribute, match_attribute)
             self.match_list.append('match_' + attribute)
 
-    def init_match(self):
-        for attribute in self.attributes:
-            self.init_match_attribute(attribute)
-        # matching material and match_* functions registration
-        self.init_match_headers()
-        self.init_match_parameters()
-
     def init_match_parameters(self):
         self.re_parameters = []
         try:
@@ -70,6 +71,9 @@ class WLRule(object):
                 try:
                     self.re_parameters.append((parameter,
                                                re.compile(value)))
+                    self.log('match:parameter (' +
+                             str(parameter) + ', ' +
+                             str(value) + ')')
                 except:
                     self.log('match:parameters regex compilation error - (' +
                              str(parameter) + ', ' +
@@ -77,6 +81,25 @@ class WLRule(object):
             self.match_list.append('match_parameters')
         except:
             self.re_parameters = None
+
+    def init_match_content_url_encoded(self):
+        self.re_content_url_encoded = []
+        try:
+            u = self.description['match']['content_url_encoded']
+            for parameter, value in u:
+                try:
+                    self.re_content_url_encoded.append((parameter,
+                                                        re.compile(value)))
+                    self.log('match:content_url_encoded (' +
+                             str(parameter) + ', ' +
+                             str(value) + ')')
+                except:
+                    self.log('match:content_url_encoded regex compilation ' +
+                             'error - (' + str(parameter) + ', ' +
+                             str(value) + ') - skipping')
+            self.match_list.append('match_content_url_encoded')
+        except:
+            self.re_content_url_encoded = None
 
     def init_match_headers(self):
         self.re_headers = []
@@ -182,7 +205,7 @@ class WLRule(object):
             self.if_mismatch_blacklist = None
 
     def match_parameters(self, request):
-        # all parameters must match, exctly
+        # all parameters must match, exactly
         if self.re_parameters is None:
             return True
         if request.parameters is None:
@@ -200,6 +223,27 @@ class WLRule(object):
                     p[2] = True
                     break
         return all([p[2] for p in parameters])
+
+    def match_content_url_encoded(self, request):
+        # all parameters must macth exactly
+        if self.re_content_url_encoded is None:
+            return True
+        if request.content_url_encoded is None:
+            return False
+        if len(request.content_url_encoded) != \
+                len(self.re_content_url_encoded):
+            return False
+        content_url_encoded = []
+        for p, v in request.content_url_encoded:
+            content_url_encoded.append([p, v, False])
+        # iteration on self.re_parameters first ensure 1 pattern matches
+        # only 1 parameter
+        for name, re in self.re_content_url_encoded:
+            for c in content_url_encoded:
+                if c[2] is False and name == c[0] and re.match(c[1]):
+                    c[2] = True
+                    break
+        return all([c[2] for c in content_url_encoded])
 
     # ToDo: change function so that it can handle the
     # double header behavior that provides tuple instead of string
@@ -219,7 +263,8 @@ class WLRule(object):
                 break
         return match
 
-    # main match function - other match_* functions are not to be called
+    # main match function
+    # other match_* functions are not meant to be called
     def match(self, request):
         return all([getattr(self, m)(request)
                     for m in self.match_list])
