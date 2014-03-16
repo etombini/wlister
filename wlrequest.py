@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import os
 
 class WLRequest(object):
     def __init__(self, request, log=None, max_content_length=1024):
@@ -58,27 +59,34 @@ class WLRequest(object):
                 int(self.request.headers_in['Content-Length'])
         else:
             self.content_length = 0
-            self.max_body_size = 0
+            self.max_content_length = 0
             return
 
-        if self.content_length > self.max_body_size:
+        if self.content_length > self.max_content_length:
             self.log('request body length (' +
                      str(self.request.headers_in['Content-Length']) +
                      ') is greater than wlister.max_post_read (' +
-                     str(self.max_body_size) + ') - skipping body analyis')
+                     str(self.max_content_length) + ') - skipping body analyis')
             return
         elif self.content_length > 0:
             try:
-                self.request.register_input_filter('wlister.pass_filter',
-                                                   'wlister::input_filter')
-                self.request.add_input_filter('wlister.pass_filter')
                 self.content = self.request.read(self.content_length)
+                current_path = os.path.dirname(os.path.abspath(__file__))
+                self.request.register_input_filter('wlister_pass_filter',
+                                                   'wlister::input_filter',
+                                                   current_path)
+                self.request.add_input_filter('wlister_pass_filter')
+                #self.content = self.request.read(self.content_length)
+                self.log('READING ' + str(self.content_length) + ' bytes')
+                self.log('CONTENT IS ' + str(self.content))
                 # Required to forward content when applying input filter
                 self.request.body = self.content
             except IOError:
                 self.log('reading request body failed' +
                          ' - TimeOut may be reached - ' +
                          'request processing is unknown')
+            except Exception as e:
+                self.log('WHAT IS THAT ? ' + str(e))
         else:
             self.tags.add('wl.bad_content_length')
 
@@ -90,7 +98,7 @@ class WLRequest(object):
         if self.request.headers_in['Content-Type'] == \
                 'application/x-www-form-urlencoded':
             self.content_url_encoded = \
-                [arg.split('=', 1) for arg in self.content]
+                [arg.split('=', 1) for arg in self.content.split('&')]
             for p in self.content_url_encoded:
                 if len(p) == 1:
                     p.append('')
