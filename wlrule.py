@@ -71,9 +71,6 @@ class WLRule(object):
                 try:
                     self.re_parameters.append((parameter,
                                                re.compile(value)))
-                    self.log('match:parameter (' +
-                             str(parameter) + ', ' +
-                             str(value) + ')')
                 except:
                     self.log('match:parameters regex compilation error - (' +
                              str(parameter) + ', ' +
@@ -85,14 +82,13 @@ class WLRule(object):
     def init_match_content_url_encoded(self):
         self.re_content_url_encoded = []
         try:
+            #ToDo: Must trigger exception to many times and is to time
+            # consuming. Change the way it is checked
             u = self.description['match']['content_url_encoded']
             for parameter, value in u:
                 try:
                     self.re_content_url_encoded.append((parameter,
                                                         re.compile(value)))
-                    self.log('match:content_url_encoded (' +
-                             str(parameter) + ', ' +
-                             str(value) + ')')
                 except:
                     self.log('match:content_url_encoded regex compilation ' +
                              'error - (' + str(parameter) + ', ' +
@@ -104,6 +100,8 @@ class WLRule(object):
     def init_match_headers(self):
         self.re_headers = []
         try:
+            #ToDo: Must trigger exception to many times and is to time
+            # consuming. Change the way it is checked
             h = self.description['match']['headers']
             for header, value in h:
                 try:
@@ -120,17 +118,20 @@ class WLRule(object):
         # list of method that must be used to validate prerequisites
         self.prerequisite_list = []
         # prerequisites material and prerequisites_* function registration
-        try:
-            self.has_tag = self.description['prerequisite']['has_tag']
+        self.has_tag = None
+        self.has_not_tag = None
+        if 'prerequisite' not in self.description:
+            return
+        if 'has_tag' in self.description['prerequisite']:
+            if type(self.description['prerequisite']['has_tag']) is list:
+                self.has_tag = self.description['prerequisite']['has_tag']
+            else:
+                self.has_tag = [self.description['prerequisite']['has_tag']]
             self.prerequisite_list.append('prerequisite_has_tag')
-        except:
-            self.has_tag = None
 
-        try:
+        if 'has_not_tag' in self.description['prerequisite']:
             self.has_not_tag = self.description['prerequisite']['has_not_tag']
             self.prerequisite_list.append('prerequisite_has_not_tag')
-        except:
-            self.has_not_tag = None
 
     def init_action_if_match(self):
         # list of methodes that must be used if matching is validated
