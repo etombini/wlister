@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import json
 
 
 class WLRequest(object):
@@ -13,7 +14,7 @@ class WLRequest(object):
         self.max_content_length = max_content_length
 
         self.lazy = ['parameters', 'content_length', 'content',
-                     'content_url_encoded']
+                     'content_length', 'content_url_encoded', 'content_json']
 
         self.tags = set()
         self.whitelisted = False
@@ -36,7 +37,6 @@ class WLRequest(object):
             raise AttributeError(key)
 
     def lazy_parameters(self):
-        # dealing with parameters
         if self.request.args is not None:
             self.tags.add('wl.has_parameters')
             self.parameters = [arg.split('=', 1)
@@ -99,30 +99,15 @@ class WLRequest(object):
                 p.append('')
 
     def lazy_content_json(self):
-        pass
-
-#    def init_body_content_type(self):
-#        if self.content_length == 0:
-#            return
-#        if 'Content-Type' not in self.request.headers_in:
-#            return
-#        if self.request.headers_in['Content-Type'] == \
-#                'application/x-www-form-urlencoded':
-#            self.content_url_encoded = \
-#                [arg.split('=', 1) for arg in self.content.split('&')]
-#            for p in self.content_url_encoded:
-#                if len(p) == 1:
-#                    p.append('')
-#            return
-#        else:
-#            self.content_url_encoded = None
-#        if self.request.headers_in['Content-Type'] == \
-#                'application/json':
-#            try:
-#                import json
-#                self.content_json = json.loads(self.content)
-#            except:
-#                self.log('can not load JSON content - json.loads() failed')
-#            return
-#        else:
-#            self.content_json = None
+        if 'Content-Type' not in self.request.headers_in:
+            self.content_json = None
+            return
+        if self.request.headers_in['Content-Type'] != \
+                'application/json':
+            self.content_json = None
+            return
+        try:
+            self.content_json = json.loads(self.content)
+        except:
+            self.content_json = None
+            self.log('can not load JSON content - json.loads() failed')
