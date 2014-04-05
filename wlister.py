@@ -2,8 +2,11 @@
 
 from mod_python import apache
 import json
+import syslog
 from wlrule import WLRule
 from wlrequest import WLRequest
+
+syslog.openlog('wlister')
 
 apache.wl_rules = None
 apache.wl_config = None
@@ -17,6 +20,10 @@ def log(message, log_level=None):
                          ' ' + message, apache.APLOG_CRIT)
     except:
         apache.log_error(message, apache.APLOG_CRIT)
+
+
+def _syslog(message):
+    syslog.syslog(message)
 
 
 def init_config(request):
