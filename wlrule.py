@@ -130,7 +130,10 @@ class WLRule(object):
             self.prerequisite_list.append('prerequisite_has_tag')
 
         if 'has_not_tag' in self.description['prerequisite']:
-            self.has_not_tag = self.description['prerequisite']['has_not_tag']
+            if type(self.description['prerequisite']['has_not_tag']) is list:
+                self.has_not_tag = self.description['prerequisite']['has_not_tag']
+            else:
+                self.has_not_tag = [self.description['prerequisite']['has_not_tag']]
             self.prerequisite_list.append('prerequisite_has_not_tag')
 
     def init_action_if_match(self):
