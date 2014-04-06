@@ -3,8 +3,10 @@
 from mod_python import apache
 import json
 import syslog
+
 from wlrule import WLRule
 from wlrequest import WLRequest
+from wlconfig import WLConfig
 
 syslog.openlog('wlister')
 
@@ -19,76 +21,27 @@ def log(message, log_level=None):
         apache.log_error(apache.wl_config['wlister.log_prefix'] +
                          ' ' + message, apache.APLOG_CRIT)
     except:
-        apache.log_error(message, apache.APLOG_CRIT)
+        apache.log_error('[wlister] ' + message, apache.APLOG_CRIT)
 
 
 def _syslog(message):
     syslog.syslog(message)
 
 
-def init_config(request):
-    """
-    Initialize wlister parameters from apache configuration
-    Paramaters are:
-        - wlister.log_prefix: prefix to prepend to wlister log entries
-        - wlister.default_action: default action at the end of rules testing
-        when no directive applied (see WLRules.action_if_match* and
-        WLRules.action_if_mismatch*)
-        - wlister.conf: file path describing the rules to be applied
-    """
-    if apache.wl_config is not None:
-        return True
-    apache.wl_config = {}
-    options = request.get_options()
-
-    if 'wlister.conf' in options:
-        apache.wl_config['wlister.conf'] = options['wlister.conf']
-
-    try:
-        apache.wl_config['wlister.log_prefix'] = \
-            options['wlister.log_prefix'].strip()
-    except:
-        apache.wl_config['wlister.log_prefix'] = '[wlister]'
-
-    try:
-        if options['wlister.default_action'] in ['block', 'pass', 'learn']:
-            apache.wl_config['wlister.default_action'] = \
-                options['wlister.default_action']
-        else:
-            apache.wl_config['wlister.default_action'] = 'block'
-            log('unknown value for wlister.default_action ' +
-                '(block, pass, learn)')
-            log('default action is ' +
-                apache.wl_config['wlister.default_action'])
-    except:
-        apache.wl_config['wlister.default_action'] = 'block'
-        log('wlister.default_action not defined')
-        log('default action is ' +
-            apache.wl_config['wlister.default_action'])
-
-    if 'wlister.max_post_read' in options:
-        apache.wl_config['wlister.max_post_read'] = \
-            options['wlister.max_post_read']
-    else:
-        apache.wl_config['wlister.max_post_read'] = 2048
-        log('default request body to be read set to ' +
-            str(apache.wl_config['wlister.max_post_read']))
-
-
 def init_rules():
     if apache.wl_rules is not None:
         return
     apache.wl_rules = []
-    if 'wlister.conf' not in apache.wl_config:
+    if apache.wl_config.conf == '':
         log('No configuration file defined - ' +
             'check [PythonOption wlister.conf filename] directive')
         return
     f = None
     try:
-        f = open(apache.wl_config['wlister.conf'])
+        f = open(apache.wl_config.conf)
     except:
         log('Can not open configuration file (wlister.conf) - ' +
-            str(apache.wl_config['wlister.conf']))
+            str(apache.wl_config.conf))
         return
     d = None
     try:
@@ -100,7 +53,7 @@ def init_rules():
         d = json.loads(j)
     except Exception as e:
         log('Rules format is not json compliant - ' +
-            str(apache.wl_config['wlister.conf']) +
+            str(apache.wl_config.conf) +
             str(e))
         return
     for r in d:
@@ -108,10 +61,13 @@ def init_rules():
 
 
 def handler(req):
-    init_config(req)
-    init_rules()
+    if apache.wl_config is None:
+        apache.wl_config = WLConfig(req, log)
+    if apache.wl_rules is None:
+        init_rules()
     wlrequest = WLRequest(req, log=log,
-                          max_content_length=int(apache.wl_config['wlister.max_post_read']))
+                          max_content_length=
+                          int(apache.wl_config.max_post_read))
     log(str(wlrequest))
 
     for rule in apache.wl_rules:
@@ -121,7 +77,7 @@ def handler(req):
         if wlrequest.blacklisted:
             return apache.HTTP_NOT_FOUND
 
-    default_action = apache.wl_config['wlister.default_action']
+    default_action = apache.wl_config.default_action
     if default_action == 'block':
         return apache.HTTP_NOT_FOUND
     elif default_action == 'pass':
