@@ -89,3 +89,9 @@ class SimpleTest(unittest.TestCase):
         content = {"var1": "val1", "var2": "val2", "UnexpectedParamter": "whatever"}
         r = requests.post('http://localhost/post/', data=content)
         self.assertEqual(r.status_code, 404)
+
+    def test_content_url_encoded_1r43(self):
+        v = 'val1' * 10000
+        content = {"var1": v}
+        r = requests.post('http://localhost/post/', data=content)
+        self.assertEqual(r.status_code, 404)
