@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from mod_python import apache
+
 import json
 import syslog
 
@@ -62,13 +63,12 @@ def init_rules():
 
 def handler(req):
     if apache.wl_config is None:
-        apache.wl_config = WLConfig(req, log)
+        apache.wl_config = WLConfig(req, _syslog)
     if apache.wl_rules is None:
         init_rules()
-    wlrequest = WLRequest(req, log=log,
+    wlrequest = WLRequest(req, log=_syslog,
                           max_content_length=
                           int(apache.wl_config.max_post_read))
-    log(str(wlrequest))
 
     for rule in apache.wl_rules:
         rule.analyze(wlrequest)
@@ -77,10 +77,12 @@ def handler(req):
         if wlrequest.blacklisted:
             return apache.HTTP_NOT_FOUND
 
-    default_action = apache.wl_config.default_action
-    if default_action == 'block':
+    wlrequest._log()
+    if apache.wl_config.default_action[:3] == 'log':
+        wlrequest._log()
+    if apache.wl_config.default_action[-5:] == 'block':
         return apache.HTTP_NOT_FOUND
-    elif default_action == 'pass':
+    if apache.wl_config.default_action[-4:] == 'pass':
         return apache.OK
 
     return apache.OK

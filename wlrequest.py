@@ -13,7 +13,7 @@ class WLRequest(object):
             self.log = log
         self.max_content_length = max_content_length
 
-        self.lazy = ['parameters', 'content_length', 'content',
+        self.lazy = ['rid', 'parameters', 'content_length', 'content',
                      'content_length', 'content_url_encoded', 'content_json']
 
         self.tags = set()
@@ -111,3 +111,20 @@ class WLRequest(object):
         except:
             self.content_json = None
             self.log('can not load JSON content - json.loads() failed')
+
+    def lazy_rid(self):
+        import uuid
+        u = uuid.uuid4().int
+        alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        base36 = ''
+        while u:
+            u, i = divmod(u, 36)
+            base36 = alphabet[i] + base36
+        self.rid = base36
+
+    def _log(self):
+        self.log('[' + self.rid + '] ' +
+                 self.method + ' ' + self.uri + ' ' + self.protocol)
+        h = self.request.headers_in
+        for header in h:
+            self.log('[' + self.rid + '] ' + str(header) + ': ' + str(self.request.headers_in[header]))
