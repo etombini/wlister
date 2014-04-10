@@ -13,7 +13,7 @@ class WLRequest(object):
             self.log = log
         self.max_content_length = max_content_length
 
-        self.lazy = ['rid', 'parameters', 'content_length', 'content',
+        self.lazy = ['request_id', 'parameters', 'content_length', 'content',
                      'content_length', 'content_url_encoded', 'content_json']
 
         self.tags = set()
@@ -56,14 +56,14 @@ class WLRequest(object):
 
     def lazy_content(self):
         if self.content_length == 0:
-            self.body_content = None
+            self.content = None
             return
         if self.content_length > self.max_content_length:
             self.log('request body length (' +
                      str(self.request.headers_in['Content-Length']) +
                      ' is greater than wlister.max_post_read (' +
                      ' - skipping body analyis')
-            self.body_content = None
+            self.content = None
             return
         if self.content_length > 0:
             try:
@@ -92,6 +92,9 @@ class WLRequest(object):
                 'application/x-www-form-urlencoded':
             self.content_url_encoded = None
             return
+        if self.content is None:
+            self.content_url_encoded = None
+            return
         self.content_url_encoded = \
             [arg.split('=', 1) for arg in self.content.split('&')]
         for p in self.content_url_encoded:
@@ -106,13 +109,16 @@ class WLRequest(object):
                 'application/json':
             self.content_json = None
             return
+        if self.content is None:
+            self.content_json = None
+            return
         try:
             self.content_json = json.loads(self.content)
         except:
             self.content_json = None
             self.log('can not load JSON content - json.loads() failed')
 
-    def lazy_rid(self):
+    def lazy_request_id(self):
         import uuid
         u = uuid.uuid4().int
         alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -120,11 +126,24 @@ class WLRequest(object):
         while u:
             u, i = divmod(u, 36)
             base36 = alphabet[i] + base36
-        self.rid = base36
+        self.request_id = base36
 
     def _log(self):
-        self.log('[' + self.rid + '] ' +
-                 self.method + ' ' + self.uri + ' ' + self.protocol)
+        request_line = '[' + self.request_id + '] ' + \
+            self.method + ' ' + self.uri
+        if self.args is not None:
+            request_line = request_line + '?' + str(self.args)
+        if self.protocol is not None:
+            request_line = request_line + ' ' + str(self.protocol)
+        self.log(request_line)
+
         h = self.request.headers_in
         for header in h:
-            self.log('[' + self.rid + '] ' + str(header) + ': ' + str(self.request.headers_in[header]))
+            self.log('[' + self.request_id + '] ' + str(header) +
+                     ': ' + str(self.request.headers_in[header]))
+        try:
+            if self.content_length > 0:
+                for chunk in [self.content[i:i+200] for i in range(0,len(self.content), 200)]:
+                    self.log('[' + self.request_id + '] ' + str(chunk))
+        except:
+            self.log('can not read HTTP Content from request, there may be some bug')

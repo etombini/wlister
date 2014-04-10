@@ -38,7 +38,6 @@ def page01(arg1, arg2):
 def page02():
     return "OK"
 
-
 @app.route('/post/', methods=['POST'])
 def page03():
     # must get url encoded parameters var1=val1&var2=val2 exactly
@@ -52,6 +51,26 @@ def page03():
         return "oups"
     r = "OK - " + str(request.form)
     return r
+
+@app.route('/1parameter/')
+def page04():
+    try:
+        var = request.args.get('var1')
+        if var == 'val1':
+            return "OK"
+        else:
+            return "NOK"
+    except:
+        return "NOK"
+
+@app.route('/parameter_list/')
+def page05():
+    if 'var1' in request.args and \
+            'var2' in request.args and \
+            'var3' in request.args:
+        return 'OK'
+    else:
+        return 'KO'
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)

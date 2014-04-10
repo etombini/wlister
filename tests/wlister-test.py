@@ -90,8 +90,26 @@ class SimpleTest(unittest.TestCase):
         r = requests.post('http://localhost/post/', data=content)
         self.assertEqual(r.status_code, 404)
 
-    def test_content_url_encoded_1r43(self):
+    def test_content_url_encoded_14(self):
         v = 'val1' * 10000
-        content = {"var1": v}
+        content = {"var1": v, "var2": "val2"}
         r = requests.post('http://localhost/post/', data=content)
+        self.assertEqual(r.status_code, 404)
+
+    def test_1parameter_15(self):
+        r = requests.get('http://localhost/1parameter/?var1=val1&var2')
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.content, "OK")
+
+    def test_parameter_list_16(self):
+        r = requests.get('http://localhost/parameter_list/?var1=val1&var2=val2&var3=val3')
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.content, "OK")
+
+    def test_parameter_list_17(self):
+        r = requests.get('http://localhost/parameter_list/?var1=val1&var2=val2')
+        self.assertEqual(r.status_code, 404)
+
+    def test_parameter_list_18(self):
+        r = requests.get('http://localhost/parameter_list/?var1=val1&var2=val2&var3=val3&val4=val4')
         self.assertEqual(r.status_code, 404)

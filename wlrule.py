@@ -35,6 +35,8 @@ class WLRule(object):
         # matching material and match_* functions registration
         self.init_match_headers()
         self.init_match_parameters()
+        self.init_match_parameter()
+        self.init_match_parameter_list()
         self.init_match_content_url_encoded()
 
     def init_match_attribute(self, attribute):
@@ -78,6 +80,61 @@ class WLRule(object):
             self.match_list.append('match_parameters')
         except:
             self.re_parameters = None
+
+    def init_match_parameter(self):
+        self.re_parameter = []
+        if 'match' in self.description and \
+                'parameter' in self.description['match']:
+            try:
+                parameter, value = self.description['match']['parameter']
+                self.re_parameter = (parameter,
+                                    re.compile(value))
+            except:
+                self.log('match:parameter regex compilation error - (' +
+                        str(parameter) + ', ' +
+                        str(value) + ') - skipping')
+                self.re_parameter = None
+            self.match_list.append('match_parameter')
+        else:
+            self.re_parameter = None
+
+    def init_match_parameter_list(self):
+        self.parameter_list = []
+        if 'match' in self.description and \
+                'parameter_list' in self.description['match']:
+            if type(self.description['match']['parameter_list']) is list:
+                self.parameter_list = self.description['match']['parameter_list']
+                self.match_list.append('match_parameter_list')
+            else:
+                self.parameter_list = None
+                self.log('ERROR - match:parameter_list is not a list, rule is broken')
+        else:
+            self.parameter_list = None
+
+    def match_parameter_list(self, request):
+        if self.parameter_list is None:
+            self.log('ERROR - match_parameter_list called while parameter_list is None')
+            return True
+        if request.parameters is None:
+            if len(self.parameter_list) == 0:
+                return True
+            else:
+                return False
+        if len(request.parameters) != len(self.parameter_list):
+            return False
+        parameters = []
+        for p, v in request.parameters:
+            parameters.append([p, False])
+        self.log('DEBUG - ' + str(parameters))
+        for name in self.parameter_list:
+            for p in parameters:
+                if p[1] is False and \
+                        p[0] == name:
+                    p[1] = True
+                    break
+        self.log('DEBUG - ' + str([p[1] for p in parameters]))
+        return all([p[1] for p in parameters])
+
 
     def init_match_content_url_encoded(self):
         self.re_content_url_encoded = []
@@ -227,6 +284,17 @@ class WLRule(object):
                     p[2] = True
                     break
         return all([p[2] for p in parameters])
+
+    def match_parameter(self, request):
+        if self.re_parameter is None:
+            return True
+        if request.parameters is None:
+            return False
+        for p, v in request.parameters:
+            if self.re_parameter[0] == p and \
+                    self.re_parameter[1].match(v):
+                return True
+        return False
 
     def match_content_url_encoded(self, request):
         # all parameters must macth exactly
