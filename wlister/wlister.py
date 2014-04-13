@@ -54,7 +54,7 @@ def init_rules():
         d = json.loads(j)
     except Exception as e:
         log('Rules format is not json compliant - ' +
-            str(apache.wl_config.conf) +
+            str(apache.wl_config.conf) + ' - ' +
             str(e))
         return
     for r in d:

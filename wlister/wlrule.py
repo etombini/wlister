@@ -81,39 +81,72 @@ class WLRule(object):
         except:
             self.re_parameters = None
 
+    def match_parameters(self, request):
+        # all parameters must match, exactly
+        if self.re_parameters is None:
+            return True
+        if request.parameters is None:
+            return False
+        if len(request.parameters) != len(self.re_parameters):
+            return False
+        parameters = []
+        for p, v in request.parameters:
+            parameters.append([p, v, False])
+        # iteration on self.re_parameters first ensure 1 pattern matches
+        # only 1 parameter
+        for name, re in self.re_parameters:
+            for p in parameters:
+                if p[2] is False and name == p[0] and re.match(p[1]):
+                    p[2] = True
+                    break
+        return all([p[2] for p in parameters])
+
     def init_match_parameter(self):
         self.re_parameter = []
         if 'match' in self.description and \
                 'parameter' in self.description['match']:
             try:
                 parameter, value = self.description['match']['parameter']
-                self.re_parameter = (parameter,
-                                    re.compile(value))
+                self.re_parameter = (parameter, re.compile(value))
             except:
                 self.log('match:parameter regex compilation error - (' +
-                        str(parameter) + ', ' +
-                        str(value) + ') - skipping')
+                         str(parameter) + ', ' +
+                         str(value) + ') - skipping')
                 self.re_parameter = None
             self.match_list.append('match_parameter')
         else:
             self.re_parameter = None
+
+    def match_parameter(self, request):
+        if self.re_parameter is None:
+            return True
+        if request.parameters is None:
+            return False
+        for p, v in request.parameters:
+            if self.re_parameter[0] == p and \
+                    self.re_parameter[1].match(v):
+                return True
+        return False
 
     def init_match_parameter_list(self):
         self.parameter_list = []
         if 'match' in self.description and \
                 'parameter_list' in self.description['match']:
             if type(self.description['match']['parameter_list']) is list:
-                self.parameter_list = self.description['match']['parameter_list']
+                self.parameter_list = \
+                    self.description['match']['parameter_list']
                 self.match_list.append('match_parameter_list')
             else:
                 self.parameter_list = None
-                self.log('ERROR - match:parameter_list is not a list, rule is broken')
+                self.log('ERROR - match:parameter_list is not a list - ' +
+                         'rule is broken')
         else:
             self.parameter_list = None
 
     def match_parameter_list(self, request):
         if self.parameter_list is None:
-            self.log('ERROR - match_parameter_list called while parameter_list is None')
+            self.log('ERROR - match_parameter_list called while ' +
+                     'parameter_list is None')
             return True
         if request.parameters is None:
             if len(self.parameter_list) == 0:
@@ -125,16 +158,13 @@ class WLRule(object):
         parameters = []
         for p, v in request.parameters:
             parameters.append([p, False])
-        self.log('DEBUG - ' + str(parameters))
         for name in self.parameter_list:
             for p in parameters:
                 if p[1] is False and \
                         p[0] == name:
                     p[1] = True
                     break
-        self.log('DEBUG - ' + str([p[1] for p in parameters]))
         return all([p[1] for p in parameters])
-
 
     def init_match_content_url_encoded(self):
         self.re_content_url_encoded = []
@@ -154,10 +184,31 @@ class WLRule(object):
         except:
             self.re_content_url_encoded = None
 
+    def match_content_url_encoded(self, request):
+        # all parameters must macth exactly
+        if self.re_content_url_encoded is None:
+            return True
+        if request.content_url_encoded is None:
+            return False
+        if len(request.content_url_encoded) != \
+                len(self.re_content_url_encoded):
+            return False
+        content_url_encoded = []
+        for p, v in request.content_url_encoded:
+            content_url_encoded.append([p, v, False])
+        # iteration on self.re_parameters first ensure 1 pattern matches
+        # only 1 parameter
+        for name, re in self.re_content_url_encoded:
+            for c in content_url_encoded:
+                if c[2] is False and name == c[0] and re.match(c[1]):
+                    c[2] = True
+                    break
+        return all([c[2] for c in content_url_encoded])
+
     def init_match_headers(self):
         self.re_headers = []
         try:
-            #ToDo: Must trigger exception to many times and is to time
+            #ToDo: Must trigger exception to many times and is too time
             # consuming. Change the way it is checked
             h = self.description['match']['headers']
             for header, value in h:
@@ -170,6 +221,24 @@ class WLRule(object):
             self.match_list.append('match_headers')
         except:
             self.re_headers = None
+
+    # ToDo: change function so that it can handle the
+    # double header behavior that provides tuple instead of string
+    def match_headers(self, request):
+        if self.re_headers is None:
+            return True
+        match = True
+        for header, re_value in self.re_headers:
+            # Todo: use header in r.headers_in statement
+            try:
+                m = re_value.match(request.headers_in[header])
+                if m is None:
+                    match = False
+            except:
+                match = False
+            if match is False:
+                break
+        return match
 
     def init_prerequisite(self):
         # list of method that must be used to validate prerequisites
@@ -188,9 +257,11 @@ class WLRule(object):
 
         if 'has_not_tag' in self.description['prerequisite']:
             if type(self.description['prerequisite']['has_not_tag']) is list:
-                self.has_not_tag = self.description['prerequisite']['has_not_tag']
+                self.has_not_tag = \
+                    self.description['prerequisite']['has_not_tag']
             else:
-                self.has_not_tag = [self.description['prerequisite']['has_not_tag']]
+                self.has_not_tag = \
+                    [self.description['prerequisite']['has_not_tag']]
             self.prerequisite_list.append('prerequisite_has_not_tag')
 
     def init_action_if_match(self):
@@ -264,76 +335,6 @@ class WLRule(object):
             self.action_if_mismatch_list.append('action_if_mismatch_blacklist')
         except:
             self.if_mismatch_blacklist = None
-
-    def match_parameters(self, request):
-        # all parameters must match, exactly
-        if self.re_parameters is None:
-            return True
-        if request.parameters is None:
-            return False
-        if len(request.parameters) != len(self.re_parameters):
-            return False
-        parameters = []
-        for p, v in request.parameters:
-            parameters.append([p, v, False])
-        # iteration on self.re_parameters first ensure 1 pattern matches
-        # only 1 parameter
-        for name, re in self.re_parameters:
-            for p in parameters:
-                if p[2] is False and name == p[0] and re.match(p[1]):
-                    p[2] = True
-                    break
-        return all([p[2] for p in parameters])
-
-    def match_parameter(self, request):
-        if self.re_parameter is None:
-            return True
-        if request.parameters is None:
-            return False
-        for p, v in request.parameters:
-            if self.re_parameter[0] == p and \
-                    self.re_parameter[1].match(v):
-                return True
-        return False
-
-    def match_content_url_encoded(self, request):
-        # all parameters must macth exactly
-        if self.re_content_url_encoded is None:
-            return True
-        if request.content_url_encoded is None:
-            return False
-        if len(request.content_url_encoded) != \
-                len(self.re_content_url_encoded):
-            return False
-        content_url_encoded = []
-        for p, v in request.content_url_encoded:
-            content_url_encoded.append([p, v, False])
-        # iteration on self.re_parameters first ensure 1 pattern matches
-        # only 1 parameter
-        for name, re in self.re_content_url_encoded:
-            for c in content_url_encoded:
-                if c[2] is False and name == c[0] and re.match(c[1]):
-                    c[2] = True
-                    break
-        return all([c[2] for c in content_url_encoded])
-
-    # ToDo: change function so that it can handle the
-    # double header behavior that provides tuple instead of string
-    def match_headers(self, request):
-        if self.re_headers is None:
-            return True
-        match = True
-        for header, re_value in self.re_headers:
-            # Todo: use header in r.headers_in statement
-            try:
-                m = re_value.match(request.headers_in[header])
-                if m is None:
-                    match = False
-            except:
-                match = False
-            if match is False:
-                break
-        return match
 
     # main match function
     # other match_* functions are not meant to be called
