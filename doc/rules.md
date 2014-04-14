@@ -1,9 +1,6 @@
 # Rules
 
- ```wlister``` uses a set of (so called) signatures or rules to determine if a request is to be whitelisted or not. 
-
-
-Signatures are a JSON formatted file. A signature is composed of prerequisites, match, actions to perform if match is ok, actions to perform if match is not ok. 
+ ```wlister``` uses a list of rules to determine if a request is to be whitelisted or not. Rules are a JSON formatted. A rule is composed of prerequisites, match functions and actions to perform if matching is ok/ko. 
 
 ``` 
 #! Javascript
@@ -34,19 +31,19 @@ Signatures are a JSON formatted file. A signature is composed of prerequisites, 
 
 **Note**: Comments can be added to this configuration file. Any line beginning with ```#``` is considered a comment.
 
-## Prerequisite
+**Note**: If the content is not JSON compliant (except for the comments), a log entry is written saying: ```Rules format is not json compliant - /configuration/file/path - %message``` where ```%message``` is a debug information from JSON loader. 
+
+## prerequisite
 
 Gathers all preconditions that has to be fullfiled to start using the signature/rule (*i.e* start matching). 
 
-### prerequisite.has_tag
+### prerequisite - has_tag
 
  ```has_tag``` can be a list of string or a string.
 True if the request has the mentionned tag or set of tags (all must be in).
 
 
-
-
-### prerequisite.has_not_tag
+### prerequisite - has_not_tag
 
  ```has_not_tag``` can be list of string or a string.
 True if the request has any of the mentionned tag or set of tags.
@@ -73,7 +70,7 @@ Tags can be set/unset with ```action_if_match``` and ```action_if_mismatch``` di
 
 ***Note***: a prerequisite not satisfied do not activate `action_if_mismatch` directive. 
 
-## Match
+## match
 
 ```
 {   
@@ -84,7 +81,7 @@ Tags can be set/unset with ```action_if_match``` and ```action_if_mismatch``` di
     "match": {
         "uri": "^/post/$",
         "method": "^(GET|HEAD)$",
-        "protocol": "^HTTP/0\.(1|0)$",
+        "protocol": "^HTTP/0\\.(1|0)$",
         "args": ".{1,256}",
         "parameter": ["var1", "^val1$"],
         "parameters": [ ["var1", "^val1$"], ["var2", "^val2$"] ],
@@ -96,49 +93,49 @@ Tags can be set/unset with ```action_if_match``` and ```action_if_mismatch``` di
 
 ```
 
-### match.uri
+### match - uri
 
 Use a regex to match the URI part of the HTTP request.
 
-### match.method
+### match - method
 
 Use a regex to match the HTTP method used. 
 
-### match.protocol
+### match - protocol
 
 Use a regex to match the HTTP protocol used (*i.e.* HTTP/1.1, HTTP/1.0 or HTTP/0.9).
 
-### match.host
+### match - host
 
 Use a regex to match the host targeted by the HTTP request.
 
-### match.args
+### match - args
 
 Use a regex to match HTTP request raw args (everything after the ```?```).
 
-### match.parameter
+### match - parameter
 
 Use a tuple (parameter, regex) to match a specific parameter in the HTTP request.
 
-### match.parameters
+### match - parameters
 	
 Use a list of tuples (parameter, regex) to match all the parameters in the HTTP request.
 
 *Note*: all parameters must exist and match.
 
-### match.parameter_list
+### match - parameter_list
 
 List of all parameters that must be in the HTTP request.
 
 *Note*: all paramameters must exist.
 
-### match.content
+### match - content
 
 Use a regex to match the raw body of the HTTP request. 
 
 *Note*: There can be limitation on the size of readable body, depending on the configuration set up. 
 
-### match.content_url_encoded
+### match - content_url_encoded
 
 Same as ```match.parameters``` for URL encoded HTTP body. 
 
@@ -147,22 +144,40 @@ Same as ```match.parameters``` for URL encoded HTTP body.
 *Note*: There can be limitation on the size of readable body, depending on the configuration set up. 
 
 
-## Action if Match
+## action_if_match
 
-## Action if Mismatch
+Actions triggered if ```match``` returns ```True```.
 
-## Tags
 
-## Whitelisting
+### action_if_match - set_tag
 
-## Blacklisting
+Associate a tag or a list of tags to the analyzed HTTP request. Such tags can be used by ```prerequisite.has_tag``` to decide if a rule has to be processed or not. 
 
-## Match
-Try and match something in the request
+```
+{   
+    "match": { "method": "GET" },  
+    "action_if_match": { "set_tag": "GET" }   
+}
+```
 
-* uri : matching the request URI. In http://www.example.com/some/file.php?id=0987654321 **/some/file.php** is the URI. 
- * test test test
+### action_if_match - unset_tag
 
-## Action if Match
+Unset a tag or a list of tags from the analyzed HTTP request.
 
-## Action if Mismatch
+### action_if_match - whitelist
+
+Set the ```whitelist``` to ```True``` or ```False``` to decide if the request is OK or blocked right away.
+
+```
+{   
+	"prerequisite": { "has_tag": "GET"}
+    "match": { "uri": "^/$" },  
+    "action_if_match": { "whitelist": "True" }   
+}
+```
+## action_if_mismatch
+
+Actions triggered if ```match``` returns ```False```.
+
+ ```set_tag```, ```unset_tag``` and ```whitelist``` have the same behavior.
+
