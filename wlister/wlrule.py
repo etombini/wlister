@@ -52,14 +52,17 @@ class WLRule(object):
 
         def match_attribute(request, attr=attribute, c_reg=c_regex):
             try:
-                if hasattr(request, attr):
+                if hasattr(request, attr) and \
+                        getattr(request, attr) is not None:
                     return bool(c_reg.match(getattr(request, attr)))
                 else:
                     self.log('Error - trying to access missing attribute '
                              + str(attr))
                     return False
             except Exception as e:
-                self.log(str(id(self)) + ' raised exception - ' + str(e))
+                self.log(str(id(self)) + ' ' + str(attr) + ' ' +
+                         str(getattr(request, attr)) +
+                         ' raised exception - ' + str(e))
                 return False
         if c_regex is not None:
             setattr(self, 'match_' + attribute, match_attribute)
@@ -155,22 +158,12 @@ class WLRule(object):
                 return False
         if len(request.parameters) != len(self.parameter_list):
             return False
-        parameters = []
-        for p, v in request.parameters:
-            parameters.append([p, False])
-        for name in self.parameter_list:
-            for p in parameters:
-                if p[1] is False and \
-                        p[0] == name:
-                    p[1] = True
-                    break
-        return all([p[1] for p in parameters])
+        return sorted([p for p, v in request.parameters]) == \
+            sorted(self.parameter_list)
 
     def init_match_content_url_encoded(self):
         self.re_content_url_encoded = []
         try:
-            #ToDo: Must trigger exception to many times and is to time
-            # consuming. Change the way it is checked
             u = self.description['match']['content_url_encoded']
             for parameter, value in u:
                 try:
@@ -208,8 +201,6 @@ class WLRule(object):
     def init_match_headers(self):
         self.re_headers = []
         try:
-            #ToDo: Must trigger exception to many times and is too time
-            # consuming. Change the way it is checked
             h = self.description['match']['headers']
             for header, value in h:
                 try:
@@ -229,7 +220,6 @@ class WLRule(object):
             return True
         match = True
         for header, re_value in self.re_headers:
-            # Todo: use header in r.headers_in statement
             try:
                 m = re_value.match(request.headers_in[header])
                 if m is None:
@@ -339,8 +329,10 @@ class WLRule(object):
     # main match function
     # other match_* functions are not meant to be called
     def match(self, request):
-        return all([getattr(self, m)(request)
-                    for m in self.match_list])
+        for f in self.match_list:
+            if not getattr(self, f)(request):
+                return False
+        return True
 
     def prerequisite_has_tag(self, request):
         if self.has_tag is None:
@@ -364,8 +356,10 @@ class WLRule(object):
 
     # main prerequisite validator
     def prerequisite(self, request):
-        return all([getattr(self, p)(request)
-                    for p in self.prerequisite_list])
+        for f in self.prerequisite_list:
+            if not getattr(self, f)(request):
+                return False
+        return True
 
     def action_if_match_set_tag(self, request):
         if self.if_match_set_tag is None:

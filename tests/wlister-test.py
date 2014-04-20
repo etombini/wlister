@@ -27,20 +27,6 @@ class SimpleTest(unittest.TestCase):
         r = requests.get('http://localhost/int/123')
         self.assertEqual(r.status_code, 200)
 
-    # parameters testing (all parameters must match)
-    # Rule definition
-    #{
-    #    "match": {
-    #        "url": "^/parameters$",
-    #        "parameters": [
-    #            ["var1", "^val1$"],
-    #            ["var2", "^val2$"]
-    #            ]
-    #    },
-    #    "action_if_match": {
-    #        "whitelist": "True"
-    #    }
-    #}
     def test_parameters_03(self):
         r = requests.get('http://localhost/parameters?var1=val1&var2=val2')
         self.assertEqual(r.status_code, 200)
@@ -112,4 +98,8 @@ class SimpleTest(unittest.TestCase):
 
     def test_parameter_list_18(self):
         r = requests.get('http://localhost/parameter_list/?var1=val1&var2=val2&var3=val3&val4=val4')
+        self.assertEqual(r.status_code, 404)
+
+    def test_parameter_list_19(self):
+        r = requests.get('http://localhost/parameter_list/?var1=val1&var2=val2&var3=val3&val3=val4')
         self.assertEqual(r.status_code, 404)
