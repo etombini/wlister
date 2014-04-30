@@ -44,11 +44,13 @@ class SimpleTest(unittest.TestCase):
         self.assertEqual(r.status_code, 404)
 
     def test_parameters_07(self):
-        r = requests.get('http://localhost/parameters?var1=ValueNotExpected&var2=val2')
+        r = requests.get('http://localhost/parameters' +
+                         '?var1=ValueNotExpected&var2=val2')
         self.assertEqual(r.status_code, 404)
 
     def test_parameters_08(self):
-        r = requests.get('http://localhost/parameters?var1=val1&var2=val2&UnexpectedParameter=whatever')
+        r = requests.get('http://localhost/parameters' +
+                         '?var1=val1&var2=val2&UnexpectedParameter=whatever')
         self.assertEqual(r.status_code, 404)
 
     def test_content_url_encoded_09(self):
@@ -72,7 +74,8 @@ class SimpleTest(unittest.TestCase):
         self.assertEqual(r.status_code, 404)
 
     def test_content_url_encoded_13(self):
-        content = {"var1": "val1", "var2": "val2", "UnexpectedParamter": "whatever"}
+        content = {"var1": "val1", "var2": "val2",
+                   "UnexpectedParamter": "whatever"}
         r = requests.post('http://localhost/post/', data=content)
         self.assertEqual(r.status_code, 404)
 
@@ -88,18 +91,28 @@ class SimpleTest(unittest.TestCase):
         self.assertEqual(r.content, "OK")
 
     def test_parameter_list_16(self):
-        r = requests.get('http://localhost/parameter_list/?var1=val1&var2=val2&var3=val3')
+        r = requests.get('http://localhost/parameter_list/' +
+                         '?var1=val1&var2=val2&var3=val3')
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.content, "OK")
 
     def test_parameter_list_17(self):
-        r = requests.get('http://localhost/parameter_list/?var1=val1&var2=val2')
+        r = requests.get('http://localhost/parameter_list/' +
+                         '?var1=val1&var2=val2')
         self.assertEqual(r.status_code, 404)
 
     def test_parameter_list_18(self):
-        r = requests.get('http://localhost/parameter_list/?var1=val1&var2=val2&var3=val3&val4=val4')
+        r = requests.get('http://localhost/parameter_list/' +
+                         '?var1=val1&var2=val2&var3=val3&val4=val4')
         self.assertEqual(r.status_code, 404)
 
     def test_parameter_list_19(self):
-        r = requests.get('http://localhost/parameter_list/?var1=val1&var2=val2&var3=val3&val3=val4')
+        r = requests.get('http://localhost/parameter_list/' +
+                         '?var1=val1&var2=val2&var3=val3&val3=val4')
         self.assertEqual(r.status_code, 404)
+
+#    def test_header_20(self):
+#        h = {'test-header': 'some value'}
+#        r = requests.get('http://localhost/header/', headers=h)
+#        self.assertEqual(r.status_code, 200, "Status code is not 200")
+#        self.assertEqual(r.content, "OK", "Response is not OK")

@@ -11,6 +11,10 @@ class WLRule(object):
         # list of method that must be used to validate a matching
         self.match_list = []
         self.prerequisite_list = []
+        if 'id' in description:
+            self._id = description['id']
+        else:
+            self._id = id(self)
 
         # method used to log messages
         if log is None:

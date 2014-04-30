@@ -72,5 +72,12 @@ def page05():
     else:
         return 'KO'
 
+@app.route('/header/')
+def page06():
+    if request.header['test-header'] == 'some value':
+        return "OK"
+    else:
+        return "KO"
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)
