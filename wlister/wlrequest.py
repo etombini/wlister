@@ -13,8 +13,15 @@ class WLRequest(object):
             self.log = log
         self.max_content_length = max_content_length
 
-        self.lazy = ['request_id', 'parameters', 'content_length', 'content',
-                     'content_length', 'content_url_encoded', 'content_json']
+        self.lazy = ['request_id',
+                     'parameters',
+                     'parameter_list',
+                     'headers',
+                     'header_list',
+                     'content',
+                     'content_length',
+                     'content_url_encoded',
+                     'content_json']
 
         self.tags = set()
         self.whitelisted = False
@@ -44,8 +51,17 @@ class WLRequest(object):
             for parameter in self.parameters:
                 if len(parameter) == 1:
                     parameter.append('')
+            self.parameters = sorted(self.parameters,
+                                     key=lambda p: p[0])
         else:
             self.parameters = None
+
+    def lazy_parameter_list(self):
+        if self.parameters is None:
+            self.parameter_list = None
+            return
+        # parameters already sorted in self.parameter
+        self.parameter_list = [p for p, v in self.parameters]
 
     def lazy_content_length(self):
         if 'Content-Length' in self.request.headers_in:
@@ -100,6 +116,31 @@ class WLRequest(object):
         for p in self.content_url_encoded:
             if len(p) == 1:
                 p.append('')
+        self.content_url_encoded = sorted(self.content_url_encoded,
+                                          key=lambda p: p[0])
+
+    def lazy_content_url_encoded_list(self):
+        if self.content_url_encoded is None:
+            self.content_url_encoded_list = None
+            return
+        # posted parameters already sorted in self.content_url_encoded
+        self.content_url_encoded_list = \
+            [p for p, v in self.content_url_encoded]
+
+    def lazy_headers(self):
+        self.headers = []
+        for header in sorted(self.request.headers_in):
+            if type(self.request.headers_in[header]) is list:
+                for value in self.request.headers_in[header]:
+                    self.headers.append([header, value])
+                self.headers.append([header, self.request.headers_in[header]])
+
+    def lazy_header_list(self):
+        if self.headers is None:
+            self.headers_list = None
+            return
+        # headers already sorted in self.headers
+        self.header_list = [h for h, v in self.headers]
 
     def lazy_content_json(self):
         if 'Content-Type' not in self.request.headers_in:
@@ -121,7 +162,7 @@ class WLRequest(object):
     def lazy_request_id(self):
         import uuid
         u = uuid.uuid4().int
-        alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        alphabet = '0123456789abcdefghijklmnopqrstuvwxyz'
         base36 = ''
         while u:
             u, i = divmod(u, 36)
@@ -143,7 +184,9 @@ class WLRequest(object):
                      ': ' + str(self.request.headers_in[header]))
         try:
             if self.content_length > 0:
-                for chunk in [self.content[i:i+200] for i in range(0,len(self.content), 200)]:
+                for chunk in [self.content[i:i+200]
+                              for i in range(0, len(self.content), 200)]:
                     self.log('[' + self.request_id + '] ' + str(chunk))
-        except:
-            self.log('can not read HTTP Content from request, there may be some bug')
+        except Exception as e:
+            self.log('can not read HTTP Content from request - ' +
+                     str(e))
