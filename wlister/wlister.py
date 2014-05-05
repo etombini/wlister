@@ -70,6 +70,9 @@ def handler(req):
                           max_content_length=
                           int(apache.wl_config.max_post_read))
 
+    # DEBUG
+    wlrequest._log()
+
     for rule in apache.wl_rules:
         rule.analyze(wlrequest)
         if wlrequest.whitelisted:
@@ -77,7 +80,6 @@ def handler(req):
         if wlrequest.blacklisted:
             return apache.HTTP_NOT_FOUND
 
-    wlrequest._log()
     if apache.wl_config.default_action[:3] == 'log':
         wlrequest._log()
     if apache.wl_config.default_action[-5:] == 'block':
@@ -101,7 +103,7 @@ def input_filter(filter):
     filter.req.log_error('--------------- START OF FILTER -----------------',
                          apache.APLOG_DEBUG)
     # if there is a body content to forward...
-    #if filter.req.body is not None:
+    # if filter.req.body is not None:
     #    filter.write(filter.req.body)
     try:
         filter.write(filter.req.body)

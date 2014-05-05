@@ -133,7 +133,7 @@ class WLRequest(object):
             if type(self.request.headers_in[header]) is list:
                 for value in self.request.headers_in[header]:
                     self.headers.append([header, value])
-                self.headers.append([header, self.request.headers_in[header]])
+            self.headers.append([header, self.request.headers_in[header]])
 
     def lazy_header_list(self):
         if self.headers is None:
