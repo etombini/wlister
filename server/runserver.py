@@ -72,9 +72,9 @@ def page05():
     else:
         return 'KO'
 
-@app.route('/header/')
+@app.route('/headers/')
 def page06():
-    if request.header['test-header'] == 'some value':
+    if request.headers['header-test'] == 'test':
         return "OK"
     else:
         return "KO"
