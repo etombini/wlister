@@ -58,7 +58,7 @@ def init_rules():
             str(e))
         return
     for r in d:
-        apache.wl_rules.append(WLRule(r, log))
+        apache.wl_rules.append(WLRule(r, _syslog))
 
 
 def handler(req):
@@ -71,7 +71,7 @@ def handler(req):
                           int(apache.wl_config.max_post_read))
 
     # DEBUG
-    wlrequest._log()
+    #wlrequest._log()
 
     for rule in apache.wl_rules:
         rule.analyze(wlrequest)

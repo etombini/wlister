@@ -39,20 +39,25 @@ class WLRule(object):
     def register_match(self):
         if 'match' not in self.description:
             return
+
         for attribute in self.attributes:
             self.register_match_attribute(attribute)
-        # matching material and match_* functions registration
+
         self.register_match_parameters()
         self.register_match_headers()
-        # self.register_match_content_url_encoded()
+        self.register_match_content_url_encoded()
 
-        self.init_match_parameter()
+        self.register_match_parameters_in()
+        self.register_match_headers_in()
+        self.register_match_content_url_encoded_in()
 
         self.register_match_parameters_list()
         self.register_match_headers_list()
         self.register_match_content_url_encoded_list()
 
-        self.init_match_content_url_encoded()
+        self.register_match_parameters_list_in()
+        self.register_match_headers_list_in()
+        self.register_match_content_url_encoded_list_in()
 
     def register_match_attribute(self, attribute):
         if attribute not in self.description['match']:
@@ -84,7 +89,6 @@ class WLRule(object):
             setattr(self, 'match_' + attribute, match_attribute)
             self.match_register.append('match_' + attribute)
 
-    # stands for register_match_(parameters|headers|content_url_encoded)
     def _register_match_items(self, items):
         if items not in self.description['match']:
             # Silently discard
@@ -120,9 +124,6 @@ class WLRule(object):
             return False
         l = getattr(request, items)
         re_l = getattr(self, 're_' + items)
-        if items == 'headers':
-            self.log('DEBUG: _match_items for headers: ' +
-                     str(l) + ' ' + str(re_l))
         if len(l) != len(re_l):
             return False
         # l and re_l are sorted
@@ -173,23 +174,20 @@ class WLRule(object):
     def register_match_content_url_encoded_in(self):
         self._register_match_items_in('content_url_encoded')
 
-    # This may not work if you have several times the same
-    # parameter name with values that can not be matched by the
-    # proper regex (e.g var1=val1&var1=!()%34 vs "^val\\d")
     def _match_items_in(self, request, items):
         if getattr(request, items) is None:
             return False
         l = getattr(request, items)
         re_l = getattr(self, 're_' + items + '_in')
         idx_re_l = 0
-        for i in range(0, len(l)):
-            if l[i][0] != re_l[idx_re_l]:
-                continue
-            if re_l[idx_re_l].match(l[i][1]):
+        len_re_l = len(re_l)
+        for name, value in l:
+            if name == re_l[idx_re_l][0] and \
+                    re_l[idx_re_l][1].match(value):
                 idx_re_l = idx_re_l + 1
-            else:  # name is ok but value doesn't match
-                return False
-        return idx_re_l == len(re_l)
+            if idx_re_l == len_re_l:
+                return True
+        return False
 
     def match_parameters_in(self, request):
         return self._match_items_in(request, 'parameters')
@@ -198,7 +196,7 @@ class WLRule(object):
         return self._match_items_in(request, 'headers')
 
     def match_content_url_encoded_in(self, request):
-        return self.match_items_in(request, 'content_url_encoded')
+        return self._match_items_in(request, 'content_url_encoded')
 
     def _register_match_items_list(self, items):
         if items + '_list' not in self.description['match']:
@@ -206,7 +204,7 @@ class WLRule(object):
             return
         if items not in ['parameters', 'headers', 'content_url_encoded']:
             self.log('ERROR - ' + str(self._id) + ' - ' + str(items) +
-                     ' is not a referenced match_list' +
+                     ' is not a referenced *_list' +
                      ' (parameters_list, headers_list, content_url_encoded_list)')
             return
         if type(self.description['match'][items + '_list']) is not list:
@@ -229,13 +227,10 @@ class WLRule(object):
         if getattr(request, items) is None:
             return False
         request_items = [name for name, value in getattr(request, items)]
-        self.log('DEBUG - request.' + items + '_list ' + str(request_items))
-        self.log('DEBUG - rule.re_' + items + '_list ' + str(getattr(self, 're_' + items + '_list')))
         # lists are sorted
         return request_items == getattr(self, 're_' + items + '_list')
 
     def match_parameters_list(self, request):
-        self.log('DEBUG - match_parameters_list: starting')
         return self._match_items_list(request, 'parameters')
 
     def match_headers_list(self, request):
@@ -244,76 +239,53 @@ class WLRule(object):
     def match_content_url_encoded_list(self, request):
         return self._match_items_list(request, 'content_url_encoded')
 
-    def init_match_parameter(self):
-        self.re_parameter = []
-        if 'match' in self.description and \
-                'parameter' in self.description['match']:
-            try:
-                parameter, value = self.description['match']['parameter']
-                self.re_parameter = (parameter, re.compile(value))
-            except:
-                self.log('match:parameter regex compilation error - (' +
-                         str(parameter) + ', ' +
-                         str(value) + ') - skipping')
-                self.re_parameter = None
-            self.match_register.append('match_parameter')
-        else:
-            self.re_parameter = None
+    def _register_match_items_list_in(self, items):
+        if items + '_list_in' not in self.description['match']:
+            return
+        if items not in ['parameters', 'headers', 'content_url_encoded']:
+            self.log('ERROR - ' + str(self._id) + ' - ' + str(items) +
+                     '_list_in is not a referenced *_list_in' +
+                     ' (parameters_listi_in, headers_list_in, content_url_encoded_list_in)')
+            return
+        if type(self.description['match'][items + '_list_in']) is not list:
+            self.log('ERROR - ' + str(self._id) + ' - ' + str(items) +
+                     '_list_in is not a list - skipping')
+            return
+        setattr(self, 're_' + items + '_list_in',
+                self.description['match'][items + '_list_in'])
+        self.match_register.append('match_' + items + '_list_in')
 
-    def match_parameter(self, request):
-        if self.re_parameter is None:
-            return True
-        if request.parameters is None:
+    def register_match_parameters_list_in(self):
+        self._register_match_items_list_in('parameters')
+
+    def register_match_headers_list_in(self):
+        self._register_match_items_list_in('headers')
+
+    def register_match_content_url_encoded_list_in(self):
+        self._register_match_items_list_in('content_url_encoded')
+
+    def _match_items_list_in(self, request, items):
+        if getattr(request, items) is None:
             return False
-        for p, v in request.parameters:
-            if self.re_parameter[0] == p and \
-                    self.re_parameter[1].match(v):
+        l = getattr(request, items)
+        re_l = getattr(self, 're_' + items + '_list_in')
+        idx_re_l = 0
+        len_re_l = len(re_l)
+        for name, value in l:
+            if name == re_l[idx_re_l]:
+                idx_re_l = idx_re_l + 1
+            if idx_re_l == len_re_l:
                 return True
         return False
 
-#    def init_match_parameter_list(self):
-#        self.parameter_list = []
-#        if 'match' in self.description and \
-#                'parameter_list' in self.description['match']:
-#            if type(self.description['match']['parameter_list']) is list:
-#                self.parameter_list = \
-#                    sorted(self.description['match']['parameter_list'],
-#                           key=lambda p: p[0])
-#                self.match_register.append('match_parameter_list')
-#            else:
-#                self.parameter_list = None
-#                self.log('ERROR - match:parameter_list is not a list - ' +
-#                         'rule is broken')
-#        else:
-#            self.parameter_list = None
-#
-#    def match_parameter_list(self, request):
-#        if self.parameter_list is None:
-#            self.log('ERROR - match_parameter_list called while ' +
-#                     'parameter_list is None')
-#            return True
-#        if request.parameters is None:
-#            return len(self.parameter_list) == 0
-#        if len(request.parameters) != len(self.parameter_list):
-#            return False
-#        return request.parameter_list == \
-#            sorted(self.parameter_list)
+    def match_parameters_list_in(self, request):
+        return self._match_items_list_in(request, 'parameters')
 
-    def init_match_content_url_encoded(self):
-        self.re_content_url_encoded = []
-        try:
-            u = self.description['match']['content_url_encoded']
-            for parameter, value in u:
-                try:
-                    self.re_content_url_encoded.append((parameter,
-                                                        re.compile(value)))
-                except:
-                    self.log('match:content_url_encoded regex compilation ' +
-                             'error - (' + str(parameter) + ', ' +
-                             str(value) + ') - skipping')
-            self.match_register.append('match_content_url_encoded')
-        except:
-            self.re_content_url_encoded = None
+    def match_headers_list_in(self, request):
+        return self._match_items_list_in(request, 'headers')
+
+    def match_content_url_encoded_list_in(self, request):
+        return self._match_items_list_in(request, 'content_url_encoded')
 
     def register_prerequisite(self):
         # prerequisites material and prerequisites_* function registration
