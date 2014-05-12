@@ -133,6 +133,27 @@ def page12():
     else:
         return 'KO'
 
+@app.route('/parameters_unique/')
+def page13():
+    if 'var1' in request.args and \
+            len(request.args.getlist('var1')) == 1:
+        var1= True
+    if 'var2' in request.args and \
+            len(request.args.getlist('var2')) == 1:
+        var2= True
+    if var1 and var2:
+        return 'OK'
+    else:
+        return 'KO'
+
+@app.route('/headers_unique/')
+def page14():
+    if 'header-test' in request.headers and \
+            len(request.headers.getlist('header-test')) == 1:
+        return 'OK'
+    else:
+        return 'KO'
+
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)

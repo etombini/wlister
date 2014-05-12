@@ -27,6 +27,8 @@ class WLRule(object):
         else:
             self.log = log
 
+        #self.log("DEBUG [" + str(self._id) + "] Building rule")
+
         if type(description) is not dict:
             raise TypeError("Description parameter must be a dictionary")
         self.description = description
@@ -58,6 +60,14 @@ class WLRule(object):
         self.register_match_parameters_list_in()
         self.register_match_headers_list_in()
         self.register_match_content_url_encoded_list_in()
+
+        self.register_match_parameters_unique()
+        self.register_match_headers_unique()
+        self.register_match_content_url_encoded_unique()
+
+        # self.log("DEBUG - [" + str(self._id) + "] - match_list: " + str(self.match_register))
+        if 'match_headers_unique' in self.match_register:
+            self.log("DEBUG [" + str(self._id) + "] - re_headers_unique: " + str(self.re_headers_unique))
 
     def register_match_attribute(self, attribute):
         if attribute not in self.description['match']:
@@ -245,7 +255,7 @@ class WLRule(object):
         if items not in ['parameters', 'headers', 'content_url_encoded']:
             self.log('ERROR - ' + str(self._id) + ' - ' + str(items) +
                      '_list_in is not a referenced *_list_in' +
-                     ' (parameters_listi_in, headers_list_in, content_url_encoded_list_in)')
+                     ' (parameters_list_in, headers_list_in, content_url_encoded_list_in)')
             return
         if type(self.description['match'][items + '_list_in']) is not list:
             self.log('ERROR - ' + str(self._id) + ' - ' + str(items) +
@@ -286,6 +296,59 @@ class WLRule(object):
 
     def match_content_url_encoded_list_in(self, request):
         return self._match_items_list_in(request, 'content_url_encoded')
+
+    def _register_match_items_unique(self, items):
+        if items + '_unique' not in self.description['match']:
+            return
+        if items not in ['parameters', 'headers', 'content_url_encoded']:
+            self.log('ERROR - ' + str(self._id) + ' - ' + str(items) +
+                     '_unique is not a referenced *_unique' +
+                     ' (parameters_unique, headers_unique, content_url_encoded_unique)')
+            return
+        if type(self.description['match'][items + '_unique']) is not list:
+            self.log('ERROR - ' + str(self._id) + ' - ' + str(items) +
+                     '_unique is not a list - skipping')
+            return
+        setattr(self, 're_' + items + '_unique',
+                self.description['match'][items + '_unique'])
+        self.match_register.append('match_' + items + '_unique')
+
+    def register_match_parameters_unique(self):
+        self._register_match_items_unique('parameters')
+
+    def register_match_headers_unique(self):
+        self._register_match_items_unique('headers')
+
+    def register_match_content_url_encoded_unique(self):
+        self._register_match_items_unique('content_url_encoded')
+
+    def _match_items_unique(self, request, items):
+        if getattr(request, items) is None:
+            return
+        l_name = [name for name, value in getattr(request, items)]
+        if items == 'headers':
+            self.log("DEBUG - headers_unique - self.re_headers_unique is " + str(self.re_headers_unique))
+            self.log("DEBUG - request.headers " + str(getattr(request, items)))
+            self.log("DEBUG - request.parameters " + str(getattr(request, "parameters")))
+            self.log("DEBUG - l_name = " + str(l_name))
+        re_l = getattr(self, 're_' + items + '_unique')
+        if items == "headers":
+            self.log("DEBUG - re_l = " + str(re_l))
+        for name in re_l:
+            if l_name.count(name) != 1:
+                self.log("DEBUG - returned False")
+                return False
+        self.log("DEBUG - Returned True")
+        return True
+
+    def match_parameters_unique(self, request):
+        return self._match_items_unique(request, 'parameters')
+
+    def match_headers_unique(self, request):
+        return self._match_items_unique(request, 'headers')
+
+    def match_content_url_encoded_unique(self, request):
+        return self._match_items_unique(request, 'content_url_encoded')
 
     def register_prerequisite(self):
         # prerequisites material and prerequisites_* function registration

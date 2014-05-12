@@ -5,6 +5,7 @@ except ImportError:
 
 import requests
 
+
 class ProxyTest(unittest.TestCase):
 
     def test_flask_ok(self):
@@ -87,16 +88,17 @@ class ContentUrlEncodedTest(unittest.TestCase):
         r = requests.post('http://localhost/post/', data=content)
         self.assertEqual(r.status_code, 404)
 
+
 class HeadersTest(unittest.TestCase):
 
     def test_headers_ok(self):
-        h = { 'header-test': 'test' }
+        h = {'header-test': 'test'}
         r = requests.get('http://localhost/headers/', headers=h)
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.content, "OK", "Response is not OK")
 
     def test_headers_ko_wrong_value(self):
-        h = { 'header-test': 'UnexpectedValue' }
+        h = {'header-test': 'UnexpectedValue'}
         r = requests.get('http://localhost/headers/', headers=h)
         self.assertEqual(r.status_code, 404)
 
@@ -119,7 +121,7 @@ class HeadersTest(unittest.TestCase):
         t = telnetlib.Telnet('wlister.vm', 80)
         t.write('GET /headers/ HTTP/1/1\n')
         t.write('Host: localhost\n')
-        #t.write('Accept: */*\n')
+        # t.write('Accept: */*\n')
         t.write('User-Agent: python-requests/2.2.0 CPython/2.7.3 Linux/3.8.0-29-generic\n')
         t.write('Accept-Encoding: gzip, deflate, compress\n')
         t.write('header-test: test\n\n')
