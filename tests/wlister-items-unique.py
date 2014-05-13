@@ -49,40 +49,44 @@ class ParametersUniqueTest(unittest.TestCase):
         self.assertEqual(r.status_code, 404)
 
 
-#class ContentUrlEncodedUniqueTest(unittest.TestCase):
-#
-#    def test_content_url_encoded_ok_same_order(self):
-#        content = {"var1": "val1", "var2": "val2"}
-#        r = requests.post('http://localhost/post/', data=content)
-#        self.assertEqual(r.status_code, 200)
-#
-#    def test_content_url_encoded_ok_different_order(self):
-#        content = {"var2": "val2", "var1": "val1"}
-#        r = requests.post('http://localhost/post/', data=content)
-#        self.assertEqual(r.status_code, 200)
-#
-#    def test_content_url_encoded_ko_less_parameter(self):
-#        content = {"var1": "val1"}
-#        r = requests.post('http://localhost/post/', data=content)
-#        self.assertEqual(r.status_code, 404)
-#
-#    def test_content_url_encoded_ko_more_parameter(self):
-#        content = {"var1": "val1", "var2": "val2",
-#                   "UnexpectedParamter": "whatever"}
-#        r = requests.post('http://localhost/post/', data=content)
-#        self.assertEqual(r.status_code, 404)
-#
-#    def test_content_url_encoded_ko_wrong_value(self):
-#        content = {"var1": "UnexpectedValue", "var2": "val2"}
-#        r = requests.post('http://localhost/post/', data=content)
-#        self.assertEqual(r.status_code, 404)
-#
-#    def test_content_url_encoded_ko_wrong_value_too_large(self):
-#        v = 'val1' * 10
-#        content = {"var1": v, "var2": "val2"}
-#        r = requests.post('http://localhost/post/', data=content)
-#        self.assertEqual(r.status_code, 404)
+class ContentUrlEncodedUniqueTest(unittest.TestCase):
 
+    def test_content_url_encoded_ok_same_order(self):
+        content = {"var1": "val1", "var2": "val2"}
+        r = requests.post('http://localhost/content_url_encoded_unique/', data=content)
+        self.assertEqual(r.status_code, 200)
+
+    def test_content_url_encoded_ok_different_order(self):
+        content = {"var2": "val2", "var1": "val1"}
+        r = requests.post('http://localhost/content_url_encoded_unique/', data=content)
+        self.assertEqual(r.status_code, 200)
+
+    def test_content_url_encoded_ok_more_parameter(self):
+        content = {"var2": "val2", "var1": "val1", "var3": "val1"}
+        r = requests.post('http://localhost/content_url_encoded_unique/', data=content)
+        self.assertEqual(r.status_code, 200)
+
+    def test_content_url_encoded_ko_less_parameter(self):
+        content = {"var1": "val1"}
+        r = requests.post('http://localhost/content_url_encoded_unique/', data=content)
+        self.assertEqual(r.status_code, 404)
+
+    def test_content_url_encoded_ko_duplicate_parameter(self):
+        import telnetlib
+        t = telnetlib.Telnet('localhost', 80)
+        t.write('GET /headers_unique/ HTTP/1/1\n')
+        t.write('Host: localhost\n')
+        t.write('header-test: test\n')
+        t.write('Header-Test: test\n')
+        t.write('header-duplicated01: test\n')
+        t.write('Accept: */*\n')
+        t.write('Content-Type: application/x-www-form-urlencoded\n')
+        t.write('Content-Length: 29\n')
+        t.write('User-Agent: python-requests/2.2.0 CPython/2.7.3 Linux/3.8.0-29-generic\n\n')
+        t.write('var1=val1&var2=val2&var1=val1\n\n')
+        r = t.read_all()
+        t.close()
+        self.assertEqual(int(r[9:12]), 404)
 
 class HeadersUniqueTest(unittest.TestCase):
 
@@ -91,13 +95,6 @@ class HeadersUniqueTest(unittest.TestCase):
         r = requests.get('http://localhost/headers_unique/?v1=v1&v1=v2&v1=v3&v1=v1', headers=h)
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.content, "OK")
-
-# Test irrelevant since requests package is not cas sensitive when handling
-# headers passed as parameters, discarding dupicates
-#    def test_headers_ok_similar_header(self):
-#        h = {'header-test': 'UnexpectedValue', 'Header-Test': 'SimilarName', 'header-similar': 'xxx'}
-#        r = requests.get('http://localhost/headers_unique/', headers=h)
-#        self.assertEqual(r.status_code, 404)
 
     def test_headers_ko_separated_value(self):
         h = {'header-test': 'UnexpectedValue, value separated', 'header-similar': 'xxx'}

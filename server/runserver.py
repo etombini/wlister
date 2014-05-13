@@ -154,6 +154,31 @@ def page14():
     else:
         return 'KO'
 
+@app.route('/content_url_encoded_unique/', methods=['POST'])
+def page15():
+    if 'var1' in request.form and \
+            len(request.form.getlist('var1')) == 1:
+        var1 = True
+    if 'var2' in request.form and \
+            len(request.form.getlist('var2')) == 1:
+        var2 = True
+    if var1 and var2:
+        return 'OK'
+    else:
+        return 'KO'
+
+@app.route('/parameters_all_unique/')
+def page16():
+        return 'OK'
+
+@app.route('/headers_all_unique/')
+def page17():
+        return 'OK'
+
+@app.route('/content_url_encoded_all_unique/', methods=['POST'])
+def page18():
+        return 'OK'
+
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)

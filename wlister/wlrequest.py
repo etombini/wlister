@@ -125,21 +125,14 @@ class WLRequest(object):
             return
         # posted parameters already sorted in self.content_url_encoded
         self.content_url_encoded_list = \
-            [p for p, v in self.content_url_encoded]
+            [name for name, value in self.content_url_encoded]
 
     def lazy_headers(self):
         self.headers = []
-        self.log('HEADERS = ' + str(self.request.headers_in))
-#        for header in sorted(self.request.headers_in):
-#            if type(self.request.headers_in[header]) is list:
-#                for value in self.request.headers_in[header]:
-#                    self.headers.append([header, value])
-#            self.headers.append([header, self.request.headers_in[header]])
         for header in sorted(self.request.headers_in):
-            values = [x.strip() for x in self.request.headers_in[header].split(',')]
+            values = [value.strip() for value in self.request.headers_in[header].split(',')]
             for value in values:
                 self.headers.append([header, value])
-        self.log('HEADERS NOW: ' + str(self.headers))
 
     def lazy_header_list(self):
         if self.headers is None:

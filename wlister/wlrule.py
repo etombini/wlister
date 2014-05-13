@@ -65,9 +65,12 @@ class WLRule(object):
         self.register_match_headers_unique()
         self.register_match_content_url_encoded_unique()
 
-        # self.log("DEBUG - [" + str(self._id) + "] - match_list: " + str(self.match_register))
-        if 'match_headers_unique' in self.match_register:
-            self.log("DEBUG [" + str(self._id) + "] - re_headers_unique: " + str(self.re_headers_unique))
+        self.register_match_parameters_all_unique()
+        self.register_match_headers_all_unique()
+        self.register_match_content_url_encoded_all_unique()
+
+        if 'match_content_url_encoded_unique' in self.match_register:
+            self.log("DEBUG [" + str(self._id) + "] - re_content_url_encoded_unique: " + str(self.re_content_url_encoded_unique))
 
     def register_match_attribute(self, attribute):
         if attribute not in self.description['match']:
@@ -326,19 +329,10 @@ class WLRule(object):
         if getattr(request, items) is None:
             return
         l_name = [name for name, value in getattr(request, items)]
-        if items == 'headers':
-            self.log("DEBUG - headers_unique - self.re_headers_unique is " + str(self.re_headers_unique))
-            self.log("DEBUG - request.headers " + str(getattr(request, items)))
-            self.log("DEBUG - request.parameters " + str(getattr(request, "parameters")))
-            self.log("DEBUG - l_name = " + str(l_name))
         re_l = getattr(self, 're_' + items + '_unique')
-        if items == "headers":
-            self.log("DEBUG - re_l = " + str(re_l))
         for name in re_l:
             if l_name.count(name) != 1:
-                self.log("DEBUG - returned False")
                 return False
-        self.log("DEBUG - Returned True")
         return True
 
     def match_parameters_unique(self, request):
@@ -349,6 +343,42 @@ class WLRule(object):
 
     def match_content_url_encoded_unique(self, request):
         return self._match_items_unique(request, 'content_url_encoded')
+
+    def _register_match_items_all_unique(self, items):
+        if items + '_all_unique' not in self.description['match']:
+            return
+        if items not in ['parameters', 'headers', 'content_url_encoded']:
+            self.log('ERROR - ' + str(self._id) + ' - ' + str(items) +
+                     '_all_unique is not a referenced *_all_unique' +
+                     ' (parameters_all_unique, headers_all_unique, content_url_encoded_all_unique)')
+            return
+        self.match_register.append('match_' + items + '_all_unique')
+
+    def register_match_parameters_all_unique(self):
+        self._register_match_items_all_unique('parameters')
+
+    def register_match_headers_all_unique(self):
+        self._register_match_items_all_unique('headers')
+
+    def register_match_content_url_encoded_all_unique(self):
+        self._register_match_items_all_unique('content_url_encoded')
+
+    def _match_items_all_unique(self, request, items):
+        if getattr(request, items) is None:
+            return False
+        l = [name for name, value in getattr(request, items)]
+        self.log('DEBUG - list of items (' + str(items) + ') is ' + str(l))
+        self.log('DEBUG _match_items_all_unique returns ' + str(len(l) == len(set(l))))
+        return len(l) == len(set(l))
+
+    def match_parameters_all_unique(self, request):
+        return self._match_items_all_unique(request, 'parameters')
+
+    def match_headers_all_unique(self, request):
+        return self._match_items_all_unique(request, 'headers')
+
+    def match_content_url_encoded_all_unique(self, request):
+        return self._match_items_all_unique(request, 'content_url_encoded')
 
     def register_prerequisite(self):
         # prerequisites material and prerequisites_* function registration
