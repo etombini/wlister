@@ -49,8 +49,9 @@ def init_rules():
         j = ''
         for l in f:
             if l[0] == '#':
-                continue
-            j = j + l
+                j = j + '\n'
+            else:
+                j = j + l
         d = json.loads(j)
     except Exception as e:
         log('Rules format is not json compliant - ' +
