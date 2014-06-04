@@ -27,8 +27,6 @@ class WLRule(object):
         else:
             self.log = log
 
-        #self.log("DEBUG [" + str(self._id) + "] Building rule")
-
         if type(description) is not dict:
             raise TypeError("Description parameter must be a dictionary")
         self.description = description
@@ -68,9 +66,6 @@ class WLRule(object):
         self.register_match_parameters_all_unique()
         self.register_match_headers_all_unique()
         self.register_match_content_url_encoded_all_unique()
-
-        if 'match_content_url_encoded_unique' in self.match_register:
-            self.log("DEBUG [" + str(self._id) + "] - re_content_url_encoded_unique: " + str(self.re_content_url_encoded_unique))
 
     def register_match_attribute(self, attribute):
         if attribute not in self.description['match']:
@@ -367,8 +362,6 @@ class WLRule(object):
         if getattr(request, items) is None:
             return False
         l = [name for name, value in getattr(request, items)]
-        self.log('DEBUG - list of items (' + str(items) + ') is ' + str(l))
-        self.log('DEBUG _match_items_all_unique returns ' + str(len(l) == len(set(l))))
         return len(l) == len(set(l))
 
     def match_parameters_all_unique(self, request):
