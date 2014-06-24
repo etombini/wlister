@@ -156,7 +156,7 @@ class WLRequest(object):
             self.content_json = json.loads(self.content)
         except:
             self.content_json = None
-            self.log('can not load JSON content - json.loads() failed')
+            self.log('ERROR - can not load JSON content from request - json.loads() failed')
 
     def lazy_request_id(self):
         import uuid

@@ -4,10 +4,12 @@ from mod_python import apache
 
 import json
 import syslog
+import jsonschema
 
 from wlrule import WLRule
 from wlrequest import WLRequest
-from wlconfig import WLConfig
+import wlconfig
+
 
 syslog.openlog('wlister')
 
@@ -58,21 +60,28 @@ def init_rules():
             str(apache.wl_config.conf) + ' - ' +
             str(e))
         return
+    try:
+        for r in d:
+            jsonschema.validate(r, wlconfig.rules_schema)
+    except Exception as e:
+        log('ERROR - Rules format is not compliant - ' +
+            str(apache.wl_config.conf) + ' - ' +
+            str(e))
+        return
     for r in d:
         apache.wl_rules.append(WLRule(r, _syslog))
 
 
 def handler(req):
     if apache.wl_config is None:
-        apache.wl_config = WLConfig(req, _syslog)
+        apache.wl_config = wlconfig.WLConfig(req, _syslog)
     if apache.wl_rules is None:
         init_rules()
     wlrequest = WLRequest(req, log=_syslog,
-                          max_content_length=
-                          int(apache.wl_config.max_post_read))
+                          max_content_length=int(apache.wl_config.max_post_read))
 
     # DEBUG
-    #wlrequest._log()
+    # wlrequest._log()
 
     for rule in apache.wl_rules:
         rule.analyze(wlrequest)

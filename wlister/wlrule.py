@@ -373,6 +373,22 @@ class WLRule(object):
     def match_content_url_encoded_all_unique(self, request):
         return self._match_items_all_unique(request, 'content_url_encoded')
 
+    def register_match_content_json(self):
+        if 'content_json' not in self.description['match']:
+            return
+        self.re_content_json = self.description['match']            
+        self.match_register.append('match_content_json')
+
+    def match_content_json(self, request):
+        if request.content_json is None:
+            return False
+        try:
+            jsonschema.validate(request.content_json, self.re_content_json)
+        except:
+            return False
+        return True
+
+
     def register_prerequisite(self):
         # prerequisites material and prerequisites_* function registration
         if 'prerequisite' not in self.description:

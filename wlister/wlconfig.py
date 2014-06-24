@@ -11,6 +11,7 @@ class WLConfig(object):
 
     def __init__(self, request, log):
         options = request.get_options()
+
         self.log = log
         if WLCONF in options:
             self.conf = options[WLCONF]
@@ -37,3 +38,229 @@ class WLConfig(object):
             self.max_post_read = WLMAXPOST_VALUE
             self.log('default request body to be read set to ' +
                      str(WLMAXPOST_VALUE))
+
+
+rules_schema = \
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "description": "Conservative json schema defining a wlrule description format",
+    "type": "object",
+    "required": ["id"],
+    "additionalProperties": False,
+    "properties": {
+        "id": {
+            "type": "string"
+        },
+        "prerequisite": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "has_tag": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                },
+                "has_not_tag": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                }
+            }
+        },
+        "match": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "uri": {
+                    "type": "string"
+                },
+                "protocol": {
+                    "type": "string"
+                },
+                "method": {
+                    "type": "string"
+                },
+                "host": {
+                    "type": "string"
+                },
+                "args": {
+                    "type": "string"
+                },
+                "parameters": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "headers": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "content_url_encoded": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "parameters_in": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "headers_in": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "content_url_encoded_in": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "parameters_list": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "headers_list": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "content_url_encoded_list": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "parameters_list_in": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "headers_list_in": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "content_url_encoded_list_in": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "parameters_unique": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "headers_unique": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "content_url_encoded_unique": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "parameters_all_unique": {
+                    "type": "string",
+                    "enum": ["True", "False"]
+                },
+                "headers_all_unique": {
+                    "type": "string",
+                    "enum": ["True", "False"]
+                },
+                "content_url_encoded_all_unique": {
+                    "type": "string",
+                    "enum": ["True", "False"]
+                },
+            }
+        },
+        "action_if_match": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "whitelist": {
+                    "type": "string",
+                    "enum": ["True", "False"]
+                },
+                "set_tag": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "unset_tag": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "action_if_mismatch": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "whitelist": {
+                    "type": "string",
+                    "enum": ["True", "False"]
+                },
+                "set_tag": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "unset_tag": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        }
+    }
+}

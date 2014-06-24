@@ -142,3 +142,12 @@ class HeadersTest(unittest.TestCase):
         r = t.read_all()
         t.close()
         self.assertEqual(int(r[9:12]), 404)
+
+
+class JSONTest(unittest.TestCase):
+
+    def test_json_ok(self):
+        content = { "var01": "val01", "var02": "val02"}
+        headers = {'content-type': 'application/json'}
+        r = requests.post("http://localhost/json/", data=json.dumps(payload), headers=headers)
+        self.assertEqual(r.status_code, 200)
