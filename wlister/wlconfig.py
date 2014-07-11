@@ -43,7 +43,7 @@ class WLConfig(object):
 rules_schema = \
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
-    "description": "Conservative json schema defining a wlrule description format",
+    "description": "Conservative json schema defining wlrule format",
     "type": "object",
     "required": ["id"],
     "additionalProperties": False,
