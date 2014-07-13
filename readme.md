@@ -1,6 +1,6 @@
 # Introduction
 
- ``` wlister ``` is a web application firewall (WAF) allowing web application protection based on whitelisting and attack signature. The former is used to quickly validating an authorized and well formed request. The latter is used to detect known attacks patterns into HTTP requests. 
+ ``` wlister ``` is a web application firewall (WAF) allowing web application protection based on whitelisting and attacks signature. The former is used to quickly validating an authorized and well formed request. The latter is used to detect known attacks patterns into HTTP requests. 
  
 Using ```wlister``` it is possible to apply both methods and to combine them at will. 
 
@@ -78,7 +78,7 @@ Rule pre-conditions, tagging and action if (mis)match imply only necessary rules
 
 **Logging** It exists but it is not nice enough. It can be very useful to have logging format used for advanced debug/configuration and logging format to raise an alert. Another format to... whatever. Logging facilities with formatting has to be implemented. 
 
-**Attack signatures** No signature here, but I guess mod_security signature database can help.
+**Attack signatures** No signature here, but I guess mod_security signatures database can help.
 
 **Documentation** Rules file used for unit tests can really help, but all rule directives must be documented at some point.
 
