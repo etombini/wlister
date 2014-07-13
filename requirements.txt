@@ -1,0 +1,4 @@
+# Package provider is pypi
+--index-url https://pypi.python.org/simple/
+
+jsonschema==2.3.0
