@@ -21,6 +21,43 @@ Whitelisting and blacklisting terminate the request analysis. Tagging/untagging 
 
 Rule configuration file used for unit test use all available features. 
 
+# Requirements
+
+## Librairies
+
+ ```wlister``` is using [ ```jsonschema``` ](https://pypi.python.org/pypi/jsonschema) library to match JSON content in HTTP requests and to validate the whole ruleset.
+It is expressed in ```requirements.txt``` and is installable using pypi.
+
+
+## Software
+
+Current version is tested with ```Apache``` and ```mod_python``` on ```Ubuntu 12.04 LTS```.
+
+```
+$ sudo dpkg -l | grep apache2
+ii  apache2                   2.2.22-1ubuntu1.4      Apache HTTP Server metapackage
+ii  apache2-mpm-prefork       2.2.22-1ubuntu1.4      Apache HTTP Server - traditional non-threaded model
+```
+
+```
+$ sudo dpkg -l | grep mod-python
+ii  libapache2-mod-python     3.3.1-9ubuntu1         Python-embedding module for Apache 2
+```
+
+```
+$ cat /etc/lsb-release 
+DISTRIB_ID=Ubuntu
+DISTRIB_RELEASE=12.04
+DISTRIB_CODENAME=precise
+DISTRIB_DESCRIPTION="Ubuntu 12.04.4 LTS"
+```
+
+ ```mod_python``` is supposed to be dead, but it is used for now (not as WSGI). Plus it seems to be not that dead, see:
+
+* [mod_python - Home Page] (http://modpython.org/)
+* [mod_python - The Long Story] (http://grisha.org/blog/2013/10/25/mod-python-the-long-story/)
+
+
 # Pros
 
 ```wlister``` allows can analyze any part of a HTTP request, headers and body, in a handy way, focusing only on the interesting part. 
@@ -37,14 +74,17 @@ Rule pre-conditions, tagging and action if (mis)match imply only necessary rules
 
 # What is missing ?
 
+**Documentation** There are some stuff in ```doc/```. Rules documentation is outdated for sure. But what is implemented is tested so there are readable examples from  ```conf/rules.conf``` and ```tests/*.py```.
+
 **Logging** It exists but it is not nice enough. It can be very useful to have logging format used for advanced debug/configuration and logging format to raise an alert. Another format to... whatever. Logging facilities with formatting has to be implemented. 
 
 **Attack signatures** No signature here, but I guess mod_security signature database can help.
 
 **Documentation** Rules file used for unit tests can really help, but all rule directives must be documented at some point.
 
-**Code review** One dev, one dev. 
+**Code review** One dev, one dev. But there are tests (see ```tests/*.py```)
 
-**Matching modules** Matching directives are hard coded. Having a new one means developing it and binding stuff through the code which is error prone. Someone will want a new one, so it'd better be easy. 
+**Refactoring** Matching directives are hard coded. Having a new one means developing it and binding stuff through the code which is error prone. Someone will want a new one, so it'd better be easy. 
 
-**Learning module** Inferring patterns, finding invariants/constants, HTTP requests parts that are involved.
+**Learning module** Inferring patterns, finding invariants/constants, ...
+

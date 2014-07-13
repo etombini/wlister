@@ -71,6 +71,27 @@ def page06():
         return "KO"
 
 
+@app.route('/content_json/', methods=['POST'])
+def page061():
+    if request.headers['content-type'] != 'application/json':
+        return "KO - Content-Type is not 'application/json'"
+    try:
+        j = request.json
+        if "var01" not in j:
+            return "KO - var01 not in JSON"
+        if "var02" not in j:
+            return "KO - var02 not in JSON"
+        if j["var01"] != "val01":
+            return "KO - var01 value is not val01"
+        if j["var02"] != "val02":
+            return "KO - var02 value is not val02"
+        if len(j) != 2:
+            return "KO - JSON body is not compliant"
+    except:
+        return "KO - Can not get JSON from the request body"
+    return "OK"
+
+
 @app.route('/parameters_in/')
 def page07():
     if 'var1' in request.args and \
@@ -117,6 +138,7 @@ def page10():
     else:
         return 'KO'
 
+
 @app.route('/headers_list_in/')
 def page11():
     if 'listed_in01' in request.headers and \
@@ -124,6 +146,7 @@ def page11():
         return 'OK'
     else:
         return 'KO'
+
 
 @app.route('/content_url_encoded_list_in/', methods=['POST'])
 def page12():
@@ -133,18 +156,20 @@ def page12():
     else:
         return 'KO'
 
+
 @app.route('/parameters_unique/')
 def page13():
     if 'var1' in request.args and \
             len(request.args.getlist('var1')) == 1:
-        var1= True
+        var1 = True
     if 'var2' in request.args and \
             len(request.args.getlist('var2')) == 1:
-        var2= True
+        var2 = True
     if var1 and var2:
         return 'OK'
     else:
         return 'KO'
+
 
 @app.route('/headers_unique/')
 def page14():
@@ -153,6 +178,7 @@ def page14():
         return 'OK'
     else:
         return 'KO'
+
 
 @app.route('/content_url_encoded_unique/', methods=['POST'])
 def page15():
@@ -167,13 +193,16 @@ def page15():
     else:
         return 'KO'
 
+
 @app.route('/parameters_all_unique/')
 def page16():
         return 'OK'
 
+
 @app.route('/headers_all_unique/')
 def page17():
         return 'OK'
+
 
 @app.route('/content_url_encoded_all_unique/', methods=['POST'])
 def page18():

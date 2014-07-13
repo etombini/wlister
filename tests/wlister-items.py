@@ -4,6 +4,8 @@ except ImportError:
     import unittest
 
 import requests
+import json
+import telnetlib
 
 
 class ProxyTest(unittest.TestCase):
@@ -103,7 +105,6 @@ class HeadersTest(unittest.TestCase):
         self.assertEqual(r.status_code, 404)
 
     def test_headers_ko_duplicated_header(self):
-        import telnetlib
         t = telnetlib.Telnet('wlister.vm', 80)
         t.write('GET /headers/ HTTP/1/1\n')
         t.write('Host: localhost\n')
@@ -117,7 +118,6 @@ class HeadersTest(unittest.TestCase):
         self.assertEqual(int(r[9:12]), 404)
 
     def test_headers_ko_less_header(self):
-        import telnetlib
         t = telnetlib.Telnet('wlister.vm', 80)
         t.write('GET /headers/ HTTP/1/1\n')
         t.write('Host: localhost\n')
@@ -130,7 +130,6 @@ class HeadersTest(unittest.TestCase):
         self.assertEqual(int(r[9:12]), 404)
 
     def test_headers_ko_more_header(self):
-        import telnetlib
         t = telnetlib.Telnet('wlister.vm', 80)
         t.write('GET /headers/ HTTP/1/1\n')
         t.write('Host: localhost\n')
@@ -147,7 +146,39 @@ class HeadersTest(unittest.TestCase):
 class JSONTest(unittest.TestCase):
 
     def test_json_ok(self):
-        content = { "var01": "val01", "var02": "val02"}
+        content = {"var01": "val01", "var02": "val02"}
         headers = {'content-type': 'application/json'}
-        r = requests.post("http://localhost/json/", data=json.dumps(payload), headers=headers)
+        r = requests.post("http://localhost/content_json/", data=json.dumps(content), headers=headers)
         self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.content, "OK")
+
+    def test_json_ok_change_order(self):
+        content = '{"var01": "val01", "var02": "val02"}'
+        headers = {'content-type': 'application/json'}
+        r = requests.post("http://localhost/content_json/", data=content, headers=headers)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.content, "OK")
+
+    def test_json_ko_wrong_value(self):
+        content = {"var01": "val03", "var02": "val02"}
+        headers = {'content-type': 'application/json'}
+        r = requests.post("http://localhost/content_json/", data=json.dumps(content), headers=headers)
+        self.assertEqual(r.status_code, 404)
+
+    def test_json_ko_too_many_values(self):
+        content = {"var01": "val01", "var02": "val02", "var03": "val03"}
+        headers = {'content-type': 'application/json'}
+        r = requests.post("http://localhost/content_json/", data=json.dumps(content), headers=headers)
+        self.assertEqual(r.status_code, 404)
+
+    def test_json_ko_not_enough_values(self):
+        content = {"var01": "val01"}
+        headers = {'content-type': 'application/json'}
+        r = requests.post("http://localhost/content_json/", data=json.dumps(content), headers=headers)
+        self.assertEqual(r.status_code, 404)
+
+    def test_json_ko_wrong_parameters(self):
+        content = {"var01": "val01", "var03": "val02"}
+        headers = {'content-type': 'application/json'}
+        r = requests.post("http://localhost/content_json/", data=json.dumps(content), headers=headers)
+        self.assertEqual(r.status_code, 404)

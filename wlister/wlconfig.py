@@ -117,6 +117,9 @@ rules_schema = \
                         }
                     }
                 },
+                "content_json": {
+                    "type": "object"
+                },
                 "parameters_in": {
                     "type": "array",
                     "items": {

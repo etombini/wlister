@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import re
+import jsonschema
 
 
 class WLRule(object):
-    attributes = ('uri', 'protocol', 'method',
-                  'host', 'args')
+    attributes = ('uri', 'protocol', 'method','host', 'args')
 
     def __init__(self, description, log=None):
         # list of method that must be used to validate a matching
@@ -46,6 +46,7 @@ class WLRule(object):
         self.register_match_parameters()
         self.register_match_headers()
         self.register_match_content_url_encoded()
+        self.register_match_content_json()
 
         self.register_match_parameters_in()
         self.register_match_headers_in()
@@ -376,7 +377,7 @@ class WLRule(object):
     def register_match_content_json(self):
         if 'content_json' not in self.description['match']:
             return
-        self.re_content_json = self.description['match']            
+        self.re_content_json = self.description['match']['content_json']
         self.match_register.append('match_content_json')
 
     def match_content_json(self, request):
@@ -387,7 +388,6 @@ class WLRule(object):
         except:
             return False
         return True
-
 
     def register_prerequisite(self):
         # prerequisites material and prerequisites_* function registration

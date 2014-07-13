@@ -35,18 +35,18 @@
 
 ## prerequisite
 
-Gathers all preconditions that has to be fullfiled to start using the signature/rule (*i.e* start matching). 
+Gathers all preconditions that has to be fulfilled to start using the signature/rule (*i.e* start matching). 
 
 ### prerequisite - has_tag
 
- ```has_tag``` can be a list of string or a string.
-True if the request has the mentionned tag or set of tags (all must be in).
+ ```has_tag``` can be a list of string.
+True if the request has the mentioned set of tags (all must be in).
 
 
 ### prerequisite - has_not_tag
 
- ```has_not_tag``` can be list of string or a string.
-True if the request has any of the mentionned tag or set of tags.
+ ```has_not_tag``` can be list of string.
+True if the request has any of the mentioned set of tags.
 
 
 ### Example
@@ -61,14 +61,14 @@ True if the request has any of the mentionned tag or set of tags.
 }
 ```
 
-This prerequisite is satisfied if ```method.get``` and ```uri.home``` are set and if ```args``` is not set. 
+This prerequisite is satisfied if ```method.get``` and ```uri.home``` are set and if ```args``` tag is not set from a previous (mis)matching rule. 
 
 
 Tags can be set/unset with ```action_if_match``` and ```action_if_mismatch``` directives.
 
 ***Note***: A tag can be any string. 
 
-***Note***: a prerequisite not satisfied do not activate `action_if_mismatch` directive. 
+***Note***: a prerequisite not satisfied do not activate ```action_if_mismatch``` directive. 
 
 ## match
 
@@ -127,7 +127,7 @@ Use a list of tuples (parameter, regex) to match all the parameters in the HTTP 
 
 List of all parameters that must be in the HTTP request.
 
-*Note*: all paramameters must exist.
+*Note*: all parameters must exist.
 
 ### match - content
 
@@ -179,5 +179,5 @@ Set the ```whitelist``` to ```True``` or ```False``` to decide if the request is
 
 Actions triggered if ```match``` returns ```False```.
 
- ```set_tag```, ```unset_tag``` and ```whitelist``` have the same behavior.
+ ```set_tag```, ```unset_tag``` and ```whitelist``` have the same behavior as for ```action_if_match```.
 
