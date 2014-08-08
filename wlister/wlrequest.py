@@ -175,10 +175,10 @@ class WLRequest(object):
     def lazy_request_id(self):
         import uuid
         u = uuid.uuid4().int
-        alphabet = '0123456789abcdefghijklmnopqrstuvwxyz'
+        alphabet = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
         base36 = ''
         while u:
-            u, i = divmod(u, 36)
+            u, i = divmod(u, 62)
             base36 = alphabet[i] + base36
         self.request_id = base36
 
