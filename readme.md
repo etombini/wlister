@@ -84,7 +84,7 @@ Rule pre-conditions, tagging and action if (mis)match imply only necessary rules
 
 **Code review** One dev, one dev. But there are tests (see ```tests/*.py```)
 
-**Refactoring** Matching directives are hard coded. Having a new one means developing it and binding stuff through the code which is error prone. Someone will want a new one, so it'd better be easy. 
+**Refactoring** Matching directives are hard coded. Having a new one means developing it and binding stuff through the code which is error prone. Someone will want a new one, so it'd better be easy.
 
 **Learning module** Inferring patterns, finding invariants/constants, ...
 
