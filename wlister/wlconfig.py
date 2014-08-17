@@ -14,8 +14,6 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-
-
 WLCONF = 'wlister.conf'
 WLPREFIX = 'wlister.log_prefix'
 WLACTION = 'wlister.default_action'
@@ -85,6 +83,12 @@ rules_schema = \
             "type": "object",
             "additionalProperties": False,
             "properties": {
+                "order": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "uri": {
                     "type": "string"
                 },

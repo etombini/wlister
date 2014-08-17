@@ -26,20 +26,21 @@ from wlrequest import WLRequest
 import wlconfig
 
 
-syslog.openlog('wlister')
-
 apache.wl_rules = None
 apache.wl_config = None
 
 apache.log_error('WLISTER Imported', apache.APLOG_CRIT)
 
 
-def log(message, log_level=None):
-    try:
-        apache.log_error(apache.wl_config['wlister.log_prefix'] +
-                         ' ' + message, apache.APLOG_CRIT)
-    except:
-        apache.log_error('[wlister] ' + message, apache.APLOG_CRIT)
+# def log(message, log_level=None):
+#     try:
+#         apache.log_error(apache.wl_config['wlister.log_prefix'] +
+#                          ' ' + message, apache.APLOG_CRIT)
+#     except:
+#         apache.log_error('[wlister] ' + message, apache.APLOG_CRIT)
+
+
+syslog.openlog('wlister')
 
 
 def _syslog(message):
@@ -51,15 +52,15 @@ def init_rules():
         return
     apache.wl_rules = []
     if apache.wl_config.conf == '':
-        log('No configuration file defined - ' +
-            'check [PythonOption wlister.conf filename] directive')
+        _syslog('No configuration file defined - ' +
+                'check [PythonOption wlister.conf filename] directive')
         return
     f = None
     try:
         f = open(apache.wl_config.conf)
     except:
-        log('Can not open configuration file (wlister.conf) - ' +
-            str(apache.wl_config.conf))
+        _syslog('Can not open configuration file (wlister.conf) - ' +
+                str(apache.wl_config.conf))
         return
     d = None
     try:
@@ -71,17 +72,17 @@ def init_rules():
                 j = j + l
         d = json.loads(j)
     except Exception as e:
-        log('Rules format is not json compliant - ' +
-            str(apache.wl_config.conf) + ' - ' +
-            str(e))
+        _syslog('Rules format is not json compliant - ' +
+                str(apache.wl_config.conf) + ' - ' +
+                str(e))
         return
     try:
         for r in d:
             jsonschema.validate(r, wlconfig.rules_schema)
     except Exception as e:
-        log('ERROR - Rules format is not compliant - ' +
-            str(apache.wl_config.conf) + ' - ' +
-            str(e))
+        _syslog('ERROR - Rules format is not compliant - ' +
+                str(apache.wl_config.conf) + ' - ' +
+                str(e))
         return
     for r in d:
         apache.wl_rules.append(WLRule(r, _syslog))
@@ -94,9 +95,6 @@ def handler(req):
         init_rules()
     wlrequest = WLRequest(req, log=_syslog,
                           max_content_length=int(apache.wl_config.max_post_read))
-
-    # DEBUG
-    # wlrequest._log()
 
     for rule in apache.wl_rules:
         rule.analyze(wlrequest)
@@ -132,9 +130,9 @@ def input_filter(filter):
     #    filter.write(filter.req.body)
     try:
         filter.write(filter.req.body)
-        log("REQUEST BODY FOUND " + str(filter.req.body))
+        _syslog("REQUEST BODY FOUND " + str(filter.req.body))
     except AttributeError:
-        log('request raw body is not defined')
+        _syslog('request raw body is not defined')
     finally:
         filter.flush()
         filter.close()

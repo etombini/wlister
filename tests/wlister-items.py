@@ -26,6 +26,55 @@ class ProxyTest(unittest.TestCase):
                          'Filtering service not working')
 
 
+class AttributesTest(unittest.TestCase):
+
+    def test_method_ok(self):
+        r = requests.get("http://localhost/method_get/")
+        self.assertEqual(r.status_code, 200)
+
+    def test_method_ko(self):
+        content = {"var1": "val1", "var2": "val2"}
+        r = requests.post('http://localhost/method_get/', data=content)
+        self.assertEqual(r.status_code, 404)
+
+    def test_protocol_ok(self):
+        t = telnetlib.Telnet('localhost', 80)
+        t.write('GET /protocol/ HTTP/1.1\n')
+        t.write('Host: localhost\n')
+        t.write('Accept: */*\n')
+        t.write('Accept-Encoding: gzip,deflate,compress\n')
+        t.write('\n\n')
+        r = t.read_all()
+        t.close()
+        self.assertEqual(int(r[9:12]), 200)
+
+    def test_protocol_ko(self):
+        t = telnetlib.Telnet('localhost', 80)
+        t.write('GET /protocol/ HTTP/1.0\n')
+        #t.write('Host: localhost\n')
+        t.write('Accept: */*\n')
+        t.write('Accept-Encoding: gzip,deflate,compress\n\n')
+        r = t.read_all()
+        t.close()
+        self.assertEqual(int(r[9:12]), 404)
+
+    def test_uri_ok(self):
+        r = requests.get("http://localhost/uri/")
+        self.assertEqual(r.status_code, 200)
+
+    def test_uri_ko(self):
+        r = requests.get("http://localhost/uri_ko/")
+        self.assertEqual(r.status_code, 404)
+
+    def test_args_ok(self):
+        r = requests.get("http://localhost/args/?var1=val1")
+        self.assertEqual(r.status_code, 200)
+
+    def test_args_ko(self):
+        r = requests.get("http://localhost/args/?var1=val1&var2=val2&var3=val3")
+        self.assertEqual(r.status_code, 404)
+
+
 class ParametersTest(unittest.TestCase):
 
     def test_parameters_ok_same_order(self):
@@ -105,8 +154,8 @@ class HeadersTest(unittest.TestCase):
         self.assertEqual(r.status_code, 404)
 
     def test_headers_ko_duplicated_header(self):
-        t = telnetlib.Telnet('wlister.vm', 80)
-        t.write('GET /headers/ HTTP/1/1\n')
+        t = telnetlib.Telnet('localhost', 80)
+        t.write('GET /headers/ HTTP/1.1\n')
         t.write('Host: localhost\n')
         t.write('Accept: */*\n')
         t.write('User-Agent: python-requests/2.2.0 CPython/2.7.3 Linux/3.8.0-29-generic\n')
@@ -118,8 +167,8 @@ class HeadersTest(unittest.TestCase):
         self.assertEqual(int(r[9:12]), 404)
 
     def test_headers_ko_less_header(self):
-        t = telnetlib.Telnet('wlister.vm', 80)
-        t.write('GET /headers/ HTTP/1/1\n')
+        t = telnetlib.Telnet('localhost', 80)
+        t.write('GET /headers/ HTTP/1.1\n')
         t.write('Host: localhost\n')
         # t.write('Accept: */*\n')
         t.write('User-Agent: python-requests/2.2.0 CPython/2.7.3 Linux/3.8.0-29-generic\n')
@@ -130,8 +179,8 @@ class HeadersTest(unittest.TestCase):
         self.assertEqual(int(r[9:12]), 404)
 
     def test_headers_ko_more_header(self):
-        t = telnetlib.Telnet('wlister.vm', 80)
-        t.write('GET /headers/ HTTP/1/1\n')
+        t = telnetlib.Telnet('localhost', 80)
+        t.write('GET /headers/ HTTP/1.1\n')
         t.write('Host: localhost\n')
         t.write('Accept: */*\n')
         t.write('Supernumerary: ouh yeah\n')

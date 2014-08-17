@@ -14,16 +14,20 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+from collections import OrderedDict
 import re
 import jsonschema
+import wlmatch
 
 
 class WLRule(object):
-    attributes = ('uri', 'protocol', 'method','host', 'args')
+
+    attributes = ('uri', 'protocol', 'method', 'host', 'args')
 
     def __init__(self, description, log=None):
-        # list of method that must be used to validate a matching
-        self.match_register = []
+
+        self.matches = []
+
         self.prerequisite_register = []
         self.action_if_match_register = []
         self.action_if_mismatch_register = []
@@ -31,7 +35,7 @@ class WLRule(object):
         if 'id' in description:
             self._id = description['id']
         else:
-            self._id = id(self)
+            self._id = str(id(self))
 
         # method used to log messages
         if log is None:
@@ -45,363 +49,24 @@ class WLRule(object):
             raise TypeError("Description parameter must be a dictionary")
         self.description = description
 
+        match_functions = []
+        if "order" in self.description["match"]:
+            match_functions = self.description["match"]["order"]
+        else:
+            match_functions = self.description["match"].keys()
+
+        for m in match_functions:
+            if m not in wlmatch.register:
+                self.log("ERROR - " + str(m) + " is not a valid matching function")
+                continue
+            match_instance = wlmatch.register[m](str(self._id) + '.match.' + m,
+                                                 self.description['match'][m],
+                                                 self.log)
+            self.matches.append(match_instance)
+
         self.register_prerequisite()
-        self.register_match()
         self.init_action_if_match()
         self.init_action_if_mismatch()
-
-    def register_match(self):
-        if 'match' not in self.description:
-            return
-
-        for attribute in self.attributes:
-            self.register_match_attribute(attribute)
-
-        self.register_match_parameters()
-        self.register_match_headers()
-        self.register_match_content_url_encoded()
-        self.register_match_content_json()
-
-        self.register_match_parameters_in()
-        self.register_match_headers_in()
-        self.register_match_content_url_encoded_in()
-
-        self.register_match_parameters_list()
-        self.register_match_headers_list()
-        self.register_match_content_url_encoded_list()
-
-        self.register_match_parameters_list_in()
-        self.register_match_headers_list_in()
-        self.register_match_content_url_encoded_list_in()
-
-        self.register_match_parameters_unique()
-        self.register_match_headers_unique()
-        self.register_match_content_url_encoded_unique()
-
-        self.register_match_parameters_all_unique()
-        self.register_match_headers_all_unique()
-        self.register_match_content_url_encoded_all_unique()
-
-    def register_match_attribute(self, attribute):
-        if attribute not in self.description['match']:
-            return
-        try:
-            c_regex = re.compile(self.description['match'][attribute])
-        except Exception as e:
-            self.log('ERROR - register_match_attribute(' +
-                     str(attribute) + ') - ' +
-                     ' Cannot compile regex: ' +
-                     str(self.description['match'][attribute]) +
-                     ' - ' + str(e))
-
-        def match_attribute(request, attr=attribute, c_reg=c_regex):
-            try:
-                if hasattr(request, attr) and \
-                        getattr(request, attr) is not None:
-                    return bool(c_reg.match(getattr(request, attr)))
-                else:
-                    self.log('Error - trying to access missing attribute '
-                             + str(attr))
-                    return False
-            except Exception as e:
-                self.log(str(id(self)) + ' ' + str(attr) + ' ' +
-                         str(getattr(request, attr)) +
-                         ' raised exception - ' + str(e))
-                return False
-        if c_regex is not None:
-            setattr(self, 'match_' + attribute, match_attribute)
-            self.match_register.append('match_' + attribute)
-
-    def _register_match_items(self, items):
-        if items not in self.description['match']:
-            # Silently discard
-            return
-        if items not in ['parameters', 'headers', 'content_url_encoded']:
-            self.log('ERROR - ' + str(self._id) + ' - ' + str(items) +
-                     ' is not a referenced match (parameters, headers, content_url_encoded)')
-            return
-        setattr(self, 're_' + items, [])
-        re_items = getattr(self, 're_' + items)
-        p = sorted(self.description['match'][items],
-                   key=lambda p: p[0])
-        for name, value in p:
-            try:
-                re_items.append((name, re.compile(value)))
-            except Exception as e:
-                self.log('ERROR - match:' + str(items) + ' regex compilation error - ' +
-                         '(' + str(name) + ', ' + str(value) + ') - skipping - ' +
-                         str(e))
-        self.match_register.append('match_' + items)
-
-    def register_match_parameters(self):
-        self._register_match_items('parameters')
-
-    def register_match_headers(self):
-        self._register_match_items('headers')
-
-    def register_match_content_url_encoded(self):
-        self._register_match_items('content_url_encoded')
-
-    def _match_items(self, request, items):
-        if getattr(request, items) is None:
-            return False
-        l = getattr(request, items)
-        re_l = getattr(self, 're_' + items)
-        if len(l) != len(re_l):
-            return False
-        # l and re_l are sorted
-        for i in range(0, len(l)):
-            if l[i][0] != re_l[i][0]:
-                return False
-            if not re_l[i][1].match(l[i][1]):
-                return False
-        return True
-
-    def match_parameters(self, request):
-        return self._match_items(request, 'parameters')
-
-    def match_headers(self, request):
-        return self._match_items(request, 'headers')
-
-    def match_content_url_encoded(self, request):
-        return self._match_items(request, 'content_url_encoded')
-
-    def _register_match_items_in(self, items):
-        if items + '_in' not in self.description['match']:
-            # Silently discard
-            return
-        if items not in ['parameters', 'headers', 'content_url_encoded']:
-            self.log('ERROR - ' + str(self._id) + ' - ' + str(items) +
-                     ' is not a referenced match_in' +
-                     ' (parameters_in, headers_in, content_url_encoded_in)')
-            return
-        setattr(self, 're_' + items + '_in', [])
-        re_items_in = getattr(self, 're_' + items + '_in')
-        p = sorted(self.description['match'][items + '_in'],
-                   key=lambda p: p[0])
-        for name, value in p:
-            try:
-                re_items_in.append((name, re.compile(value)))
-            except Exception as e:
-                self.log('ERROR - match:' + str(items) + '_in regex compilation error - ' +
-                         '(' + str(name) + ', ' + str(value) + ') - skipping - ' +
-                         str(e))
-        self.match_register.append('match_' + items + '_in')
-
-    def register_match_parameters_in(self):
-        self._register_match_items_in('parameters')
-
-    def register_match_headers_in(self):
-        self._register_match_items_in('headers')
-
-    def register_match_content_url_encoded_in(self):
-        self._register_match_items_in('content_url_encoded')
-
-    def _match_items_in(self, request, items):
-        if getattr(request, items) is None:
-            return False
-        l = getattr(request, items)
-        re_l = getattr(self, 're_' + items + '_in')
-        idx_re_l = 0
-        len_re_l = len(re_l)
-        for name, value in l:
-            if name == re_l[idx_re_l][0] and \
-                    re_l[idx_re_l][1].match(value):
-                idx_re_l = idx_re_l + 1
-            if idx_re_l == len_re_l:
-                return True
-        return False
-
-    def match_parameters_in(self, request):
-        return self._match_items_in(request, 'parameters')
-
-    def match_headers_in(self, request):
-        return self._match_items_in(request, 'headers')
-
-    def match_content_url_encoded_in(self, request):
-        return self._match_items_in(request, 'content_url_encoded')
-
-    def _register_match_items_list(self, items):
-        if items + '_list' not in self.description['match']:
-            # Silently discard
-            return
-        if items not in ['parameters', 'headers', 'content_url_encoded']:
-            self.log('ERROR - ' + str(self._id) + ' - ' + str(items) +
-                     ' is not a referenced *_list' +
-                     ' (parameters_list, headers_list, content_url_encoded_list)')
-            return
-        if type(self.description['match'][items + '_list']) is not list:
-            self.log('ERROR - ' + str(self._id) + ' - ' + str(items) +
-                     '_list is not a list - skipping')
-            return
-        setattr(self, 're_' + items + '_list', self.description['match'][items + '_list'])
-        self.match_register.append('match_' + items + '_list')
-
-    def register_match_parameters_list(self):
-        self._register_match_items_list('parameters')
-
-    def register_match_headers_list(self):
-        self._register_match_items_list('headers')
-
-    def register_match_content_url_encoded_list(self):
-        self._register_match_items_list('content_url_encoded')
-
-    def _match_items_list(self, request, items):
-        if getattr(request, items) is None:
-            return False
-        request_items = [name for name, value in getattr(request, items)]
-        # lists are sorted
-        return request_items == getattr(self, 're_' + items + '_list')
-
-    def match_parameters_list(self, request):
-        return self._match_items_list(request, 'parameters')
-
-    def match_headers_list(self, request):
-        return self._match_items_list(request, 'headers')
-
-    def match_content_url_encoded_list(self, request):
-        return self._match_items_list(request, 'content_url_encoded')
-
-    def _register_match_items_list_in(self, items):
-        if items + '_list_in' not in self.description['match']:
-            return
-        if items not in ['parameters', 'headers', 'content_url_encoded']:
-            self.log('ERROR - ' + str(self._id) + ' - ' + str(items) +
-                     '_list_in is not a referenced *_list_in' +
-                     ' (parameters_list_in, headers_list_in, content_url_encoded_list_in)')
-            return
-        if type(self.description['match'][items + '_list_in']) is not list:
-            self.log('ERROR - ' + str(self._id) + ' - ' + str(items) +
-                     '_list_in is not a list - skipping')
-            return
-        setattr(self, 're_' + items + '_list_in',
-                self.description['match'][items + '_list_in'])
-        self.match_register.append('match_' + items + '_list_in')
-
-    def register_match_parameters_list_in(self):
-        self._register_match_items_list_in('parameters')
-
-    def register_match_headers_list_in(self):
-        self._register_match_items_list_in('headers')
-
-    def register_match_content_url_encoded_list_in(self):
-        self._register_match_items_list_in('content_url_encoded')
-
-    def _match_items_list_in(self, request, items):
-        if getattr(request, items) is None:
-            return False
-        l = getattr(request, items)
-        re_l = getattr(self, 're_' + items + '_list_in')
-        idx_re_l = 0
-        len_re_l = len(re_l)
-        for name, value in l:
-            if name == re_l[idx_re_l]:
-                idx_re_l = idx_re_l + 1
-            if idx_re_l == len_re_l:
-                return True
-        return False
-
-    def match_parameters_list_in(self, request):
-        return self._match_items_list_in(request, 'parameters')
-
-    def match_headers_list_in(self, request):
-        return self._match_items_list_in(request, 'headers')
-
-    def match_content_url_encoded_list_in(self, request):
-        return self._match_items_list_in(request, 'content_url_encoded')
-
-    def _register_match_items_unique(self, items):
-        if items + '_unique' not in self.description['match']:
-            return
-        if items not in ['parameters', 'headers', 'content_url_encoded']:
-            self.log('ERROR - ' + str(self._id) + ' - ' + str(items) +
-                     '_unique is not a referenced *_unique' +
-                     ' (parameters_unique, headers_unique, content_url_encoded_unique)')
-            return
-        if type(self.description['match'][items + '_unique']) is not list:
-            self.log('ERROR - ' + str(self._id) + ' - ' + str(items) +
-                     '_unique is not a list - skipping')
-            return
-        setattr(self, 're_' + items + '_unique',
-                self.description['match'][items + '_unique'])
-        self.match_register.append('match_' + items + '_unique')
-
-    def register_match_parameters_unique(self):
-        self._register_match_items_unique('parameters')
-
-    def register_match_headers_unique(self):
-        self._register_match_items_unique('headers')
-
-    def register_match_content_url_encoded_unique(self):
-        self._register_match_items_unique('content_url_encoded')
-
-    def _match_items_unique(self, request, items):
-        if getattr(request, items) is None:
-            return
-        l_name = [name for name, value in getattr(request, items)]
-        re_l = getattr(self, 're_' + items + '_unique')
-        for name in re_l:
-            if l_name.count(name) != 1:
-                return False
-        return True
-
-    def match_parameters_unique(self, request):
-        return self._match_items_unique(request, 'parameters')
-
-    def match_headers_unique(self, request):
-        return self._match_items_unique(request, 'headers')
-
-    def match_content_url_encoded_unique(self, request):
-        return self._match_items_unique(request, 'content_url_encoded')
-
-    def _register_match_items_all_unique(self, items):
-        if items + '_all_unique' not in self.description['match']:
-            return
-        if items not in ['parameters', 'headers', 'content_url_encoded']:
-            self.log('ERROR - ' + str(self._id) + ' - ' + str(items) +
-                     '_all_unique is not a referenced *_all_unique' +
-                     ' (parameters_all_unique, headers_all_unique, content_url_encoded_all_unique)')
-            return
-        self.match_register.append('match_' + items + '_all_unique')
-
-    def register_match_parameters_all_unique(self):
-        self._register_match_items_all_unique('parameters')
-
-    def register_match_headers_all_unique(self):
-        self._register_match_items_all_unique('headers')
-
-    def register_match_content_url_encoded_all_unique(self):
-        self._register_match_items_all_unique('content_url_encoded')
-
-    def _match_items_all_unique(self, request, items):
-        if getattr(request, items) is None:
-            return False
-        l = [name for name, value in getattr(request, items)]
-        return len(l) == len(set(l))
-
-    def match_parameters_all_unique(self, request):
-        return self._match_items_all_unique(request, 'parameters')
-
-    def match_headers_all_unique(self, request):
-        return self._match_items_all_unique(request, 'headers')
-
-    def match_content_url_encoded_all_unique(self, request):
-        return self._match_items_all_unique(request, 'content_url_encoded')
-
-    def register_match_content_json(self):
-        if 'content_json' not in self.description['match']:
-            return
-        self.re_content_json = self.description['match']['content_json']
-        self.match_register.append('match_content_json')
-
-    def match_content_json(self, request):
-        if request.content_json is None:
-            return False
-        try:
-            jsonschema.validate(request.content_json, self.re_content_json)
-        except:
-            return False
-        return True
 
     def register_prerequisite(self):
         # prerequisites material and prerequisites_* function registration
@@ -500,8 +165,8 @@ class WLRule(object):
     # main match function
     # other match_* functions are not meant to be called
     def match(self, request):
-        for f in self.match_register:
-            if not getattr(self, f)(request):
+        for m in self.matches:
+            if not m.match(request):
                 return False
         return True
 
