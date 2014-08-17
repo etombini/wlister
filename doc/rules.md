@@ -3,7 +3,6 @@
  ```wlister``` uses a list of rules to determine if a request is to be whitelisted or not. Rules are a JSON formatted. A rule is composed of prerequisites, match functions and actions to perform if matching is ok/ko. 
 
 ``` 
-#! Javascript
 [
 	{
 		"prerequisite": {
@@ -49,13 +48,13 @@ True if the request has the mentioned set of tags (all must be in).
 True if the request has any of the mentioned set of tags.
 
 
-### Example
+**Example**
 
 ```
 {
   "prerequisite": {
     "has_tag": ["method.get", "uri.home"],
-    "has_not_tag": "args"
+    "has_not_tag": ["args"]
   },
   [...]
 }
@@ -71,6 +70,11 @@ Tags can be set/unset with ```action_if_match``` and ```action_if_mismatch``` di
 ***Note***: a prerequisite not satisfied do not activate ```action_if_mismatch``` directive. 
 
 ## match
+
+ ```match``` section sets up a group of matching directives altogether. To be true and be a matching rule, each and every matching directives (described below) must positively match the incoming requests. 
+
+The first failing matching directive cancels all remaining matching directives and the rule processing for the current requests jumps to ```action_if_mismatch```.
+If all directives return ```True```, the rule processing jumps to ```action_if_match```.
 
 ```
 {   
@@ -92,6 +96,22 @@ Tags can be set/unset with ```action_if_match``` and ```action_if_mismatch``` di
 }  
 
 ```
+
+### match - ```order```
+
+There is a non matching directive named ```order```. It forces the matching directives to be executed in a specific order. Without this directive, execution of matching directives can be executed in any arrangement. This directive must contain all matching directive in the related section, missing ones is not executed. 
+
+```
+[...]
+	"match": {
+		"order": ["uri", "args"],
+		"uri": "^/very/complex/processing/$",
+		"args": "some_cpu_consuming_regex"
+	},
+[...]
+```
+
+As the global matching depends on specific directives, the earlier it fails, the faster the analysis goes, avoiding unnecessary matching directives. 
 
 ### match - uri
 
