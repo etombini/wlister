@@ -28,6 +28,27 @@ def page_not_found(error):
 def index():
     return "OK"
 
+@app.route('/protocol/')
+def index001():
+    return "OK"
+
+@app.route('/method_get/', methods=['GET'])
+def index002():
+    return "OK"
+
+@app.route('/uri/')
+def index003():
+    return "OK"
+
+
+@app.route('/args/')
+def index004():
+    if len(request.args) != 1:
+        return 'KO'
+    if 'var1' in request.args:
+        if 'val1' == request.args.get('var1'):
+            return 'OK'
+
 
 @app.route('/int/<int:value>')
 def index01(value):
