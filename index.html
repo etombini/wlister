@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="description" content="wlister : Web application firewall designed to whitelist and/or blacklist HTTP requests. ">
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>wlister</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/etombini/wlister">View on GitHub</a>
+
+          <h1 id="project_title">wlister</h1>
+          <h2 id="project_tagline">Web application firewall designed to whitelist and/or blacklist HTTP requests. </h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/etombini/wlister/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/etombini/wlister/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h1>
+<a name="introduction" class="anchor" href="#introduction"><span class="octicon octicon-link"></span></a>Introduction</h1>
+
+<p><code>wlister</code> is a web application firewall (WAF) allowing web application protection based on whitelisting and attacks signature. The former is used to quickly validating an authorized and well formed request. The latter is used to detect known attacks patterns into HTTP requests. </p>
+
+<p>Using <code>wlister</code> it is possible to apply both methods and to combine them at will. </p>
+
+<p><code>wlister</code> allows to describe interactions between the web application and the client, using each piece of a HTTP request and their combination as a potential validation point (URI, parameters, headers, content, method, protocol, ...).</p>
+
+<h1>
+<a name="how-it-works" class="anchor" href="#how-it-works"><span class="octicon octicon-link"></span></a>How it works</h1>
+
+<p>Each incoming request is analyzed using a set of rules. A rule has pre-conditions that must be fulfilled to be applied against the request. If pre-conditions are satisfied (reps. not satisfied), rule is applied (resp. next rule is used). "Rule is applied" means pattern matching is executed against some part of the request. </p>
+
+<p>Depending on the matching results (match or mismatch), actions can be specified. For now, there are 3 actions:</p>
+
+<ul>
+<li>tagging/untagging the request for next rule analysis</li>
+<li>whitelisting </li>
+<li>blacklisting</li>
+</ul><p>Whitelisting and blacklisting terminate the request analysis. Tagging/untagging is useful to build smart pre-conditions, avoiding rules being applied whereas they are not related at all (<em>e.g.</em> HTTP request for static content must not be checked by rules dedicated to the authentication process nor any other rule). </p>
+
+<p>Rule configuration file used for unit test use all available features. </p>
+
+<h1>
+<a name="requirements" class="anchor" href="#requirements"><span class="octicon octicon-link"></span></a>Requirements</h1>
+
+<h2>
+<a name="librairies" class="anchor" href="#librairies"><span class="octicon octicon-link"></span></a>Librairies</h2>
+
+<p><code>wlister</code> is using <a href="https://pypi.python.org/pypi/jsonschema"> <code>jsonschema</code> </a> library to match JSON content in HTTP requests and to validate the whole ruleset.
+It is expressed in <code>requirements.txt</code> and is installable using pypi.</p>
+
+<h2>
+<a name="software" class="anchor" href="#software"><span class="octicon octicon-link"></span></a>Software</h2>
+
+<p>Current version is tested with <code>Apache</code> and <code>mod_python</code> on <code>Ubuntu 12.04 LTS</code>.</p>
+
+<pre><code>$ sudo dpkg -l | grep apache2
+ii  apache2                   2.2.22-1ubuntu1.4      Apache HTTP Server metapackage
+ii  apache2-mpm-prefork       2.2.22-1ubuntu1.4      Apache HTTP Server - traditional non-threaded model
+</code></pre>
+
+<pre><code>$ sudo dpkg -l | grep mod-python
+ii  libapache2-mod-python     3.3.1-9ubuntu1         Python-embedding module for Apache 2
+</code></pre>
+
+<pre><code>$ cat /etc/lsb-release 
+DISTRIB_ID=Ubuntu
+DISTRIB_RELEASE=12.04
+DISTRIB_CODENAME=precise
+DISTRIB_DESCRIPTION="Ubuntu 12.04.4 LTS"
+</code></pre>
+
+<p><code>mod_python</code> is supposed to be dead, but it is used for now (not as WSGI). Plus it seems to be not that dead, see:</p>
+
+<ul>
+<li><a href="http://modpython.org/">mod_python - Home Page</a></li>
+<li><a href="http://grisha.org/blog/2013/10/25/mod-python-the-long-story/">mod_python - The Long Story</a></li>
+</ul><h1>
+<a name="pros" class="anchor" href="#pros"><span class="octicon octicon-link"></span></a>Pros</h1>
+
+<p><code>wlister</code> allows can analyze any part of a HTTP request, headers and body, in a handy way, focusing only on the interesting part. </p>
+
+<p>Rule pre-conditions, tagging and action if (mis)match imply only necessary rules are applied and decision is done quickly; allowed or denied. </p>
+
+<p><code>wlister</code> try and use lazy evaluation to avoid transforming data that may never be used (but this is local optimization and must be measured). </p>
+
+<h1>
+<a name="cons" class="anchor" href="#cons"><span class="octicon octicon-link"></span></a>Cons</h1>
+
+<p><code>wlister</code> is based on <code>mod_python</code> and Apache. This is not bad <em>per se</em> but because it is a Python application. Surely not fast enough although no benchmark have been done so far.</p>
+
+<p><code>wlister</code> is based on <code>mod_python</code> and Apache, so it can not be used within another web server/proxy. </p>
+
+<h1>
+<a name="what-is-missing-" class="anchor" href="#what-is-missing-"><span class="octicon octicon-link"></span></a>What is missing ?</h1>
+
+<p><strong>Documentation</strong> There are some stuff in <code>doc/</code>. Rules documentation is outdated for sure. But what is implemented is tested so there are readable examples from  <code>conf/rules.conf</code> and <code>tests/*.py</code>.</p>
+
+<p><strong>Logging</strong> It exists but it is not nice enough. It can be very useful to have logging format used for advanced debug/configuration and logging format to raise an alert. Another format to... whatever. Logging facilities with formatting has to be implemented. </p>
+
+<p><strong>Attack signatures</strong> No signature here, but I guess mod_security signatures database can help.</p>
+
+<p><strong>Documentation</strong> Rules file used for unit tests can really help, but all rule directives must be documented at some point.</p>
+
+<p><strong>Code review</strong> One dev, one dev. But there are tests (see <code>tests/*.py</code>)</p>
+
+<p><strong>Refactoring</strong> Matching directives are hard coded. Having a new one means developing it and binding stuff through the code which is error prone. Someone will want a new one, so it'd better be easy.</p>
+
+<p><strong>Learning module</strong> Inferring patterns, finding invariants/constants, ...</p>
+
+<h1>
+<a name="licensing" class="anchor" href="#licensing"><span class="octicon octicon-link"></span></a>Licensing</h1>
+
+<p>Copyright (c) 2014, Elvis Tombini </p>
+
+<p>Permission to use, copy, modify, and distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.</p>
+
+<p>THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">wlister maintained by <a href="https://github.com/etombini">etombini</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
