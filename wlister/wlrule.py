@@ -14,10 +14,8 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-from collections import OrderedDict
-import re
-import jsonschema
 import wlmatch
+import wlactionif
 
 
 class WLRule(object):
@@ -28,9 +26,11 @@ class WLRule(object):
 
         self.matches = []
 
+        self.action_if_match = []
+        self.action_if_mismatch = []
+
+        #oldies to be refactored
         self.prerequisite_register = []
-        self.action_if_match_register = []
-        self.action_if_mismatch_register = []
 
         if 'id' in description:
             self._id = description['id']
@@ -45,10 +45,9 @@ class WLRule(object):
         else:
             self.log = log
 
-        if type(description) is not dict:
-            raise TypeError("Description parameter must be a dictionary")
         self.description = description
 
+        # Match directive set up
         match_functions = []
         if "order" in self.description["match"]:
             match_functions = self.description["match"]["order"]
@@ -57,16 +56,33 @@ class WLRule(object):
 
         for m in match_functions:
             if m not in wlmatch.register:
-                self.log("ERROR - " + str(m) + " is not a valid matching function")
+                self.log("ERROR - " + str(m) + " is not a valid matching function for match directive")
                 continue
-            match_instance = wlmatch.register[m](str(self._id) + '.match.' + m,
+            match_instance = wlmatch.register[m](str(self._id) + '.match.' + str(m),
                                                  self.description['match'][m],
                                                  self.log)
             self.matches.append(match_instance)
 
+        # Action If Match directive set up
+        if "action_if_match" in self.description:
+            for a in self.description["action_if_match"]:
+                if a not in wlactionif.register:
+                    self.log("ERROR - " + str(m) + " is not a valid action function for action_if_match directive")
+                    continue
+                self.action_if_match.append(wlactionif.register[a](str(self._id) + "action_if_match" + str(a),
+                                                                   self.description["action_if_match"][a],
+                                                                   self.log))
+
+        # Action If Mismatch directive set up
+        if "action_if_mismatch" in self.description:
+            for a in self.description["action_if_mismatch"]:
+                if a not in wlactionif.register:
+                    self.log("ERROR - " + str(m) + " is not a valid action function for action_if_mismatch directive")
+                    continue
+                self.action_if_mismatch.append(wlactionif.register[a](str(self._id) + "action_if_mismatch" + str(a),
+                                                                      self.description["action_if_mismatch"][a],
+                                                                      self.log))
         self.register_prerequisite()
-        self.init_action_if_match()
-        self.init_action_if_mismatch()
 
     def register_prerequisite(self):
         # prerequisites material and prerequisites_* function registration
@@ -89,78 +105,6 @@ class WLRule(object):
                 self.has_not_tag = \
                     [self.description['prerequisite']['has_not_tag']]
             self.prerequisite_register.append('prerequisite_has_not_tag')
-
-    def init_action_if_match(self):
-        # list of methodes that must be used if matching is validated
-        self.action_if_match_register = []
-        # if_match material and if_match_* function registration
-        try:
-            self.if_match_set_tag = \
-                self.description['action_if_match']['set_tag']
-            if type(self.if_match_set_tag) is not list:
-                self.if_match_set_tag = [self.if_match_set_tag]
-            self.action_if_match_register.append('action_if_match_set_tag')
-        except:
-            self.if_match_set_tag = None
-
-        try:
-            self.if_match_unset_tag = \
-                self.description['action_if_match']['unset_tag']
-            if type(self.if_match_unset_tag) is not list:
-                self.if_match_unset_tag = [self.if_match_unset_tag]
-            self.action_if_match_register.append['action_if_match_unset_tag']
-        except:
-            self.if_match_unset_tag = None
-
-        try:
-            self.if_match_whitelist = \
-                self.description['action_if_match']['whitelist']
-            self.action_if_match_register.append('action_if_match_whitelist')
-        except:
-            self.if_match_whitelist = None
-
-        try:
-            self.if_match_blacklist = \
-                self.description['action_if_match']['blacklist']
-            self.action_if_match_register.append('action_if_match_blacklist')
-        except:
-            self.if_match_blacklist = None
-
-    def init_action_if_mismatch(self):
-        # list of methods that must be used if matching is not validated
-        self.action_if_mismatch_register = []
-        # if_mismatch material and if_mismatch_* function registration
-        try:
-            self.if_mismatch_set_tag = \
-                self.description['action_if_mismatch']['set_tag']
-            if type(self.if_mismatch_set_tag) is not list:
-                self.if_mismatch_set_tag = [self.if_mismatch_set_tag]
-            self.action_if_mismatch_register.append('action_if_mismatch_set_tag')
-        except:
-            self.if_mismatch_set_tag = None
-
-        try:
-            self.if_mismatch_unset_tag = \
-                self.description['action_if_mismatch']['unset_tag']
-            if type(self.if_mismatch_unset_tag) is not list:
-                self.if_mismatch_unset_tag = [self.if_mismatch_unset_tag]
-            self.action_if_mismatch_register.append('action_if_mismatch_unset_tag')
-        except:
-            self.if_mismatch_unset_tag = None
-
-        try:
-            self.if_mismatch_whitelist = \
-                self.description['action_if_mismatch']['whitelist']
-            self.action_if_mismatch_register.append('action_if_mismatch_whitelist')
-        except:
-            self.if_mismatch_whitelist = None
-
-        try:
-            self.if_mismatch_blacklist = \
-                self.description['action_if_mismatch']['blacklist']
-            self.action_if_mismatch_register.append('action_if_mismatch_blacklist')
-        except:
-            self.if_mismatch_blacklist = None
 
     # main match function
     # other match_* functions are not meant to be called
@@ -197,88 +141,12 @@ class WLRule(object):
                 return False
         return True
 
-    def action_if_match_set_tag(self, request):
-        if self.if_match_set_tag is None:
-            return
-        for t in self.if_match_set_tag:
-            request.tags.add(t)
-
-    def action_if_match_unset_tag(self, request):
-        if self.if_match_unset_tag is None:
-            return
-        for t in self.if_match_unset_tag:
-            request.tags.discard(t)
-
-    def action_if_match_whitelist(self, request):
-        if self.if_match_whitelist is None:
-            request.whitelisted = False
-            return
-        if self.if_match_whitelist == 'True':
-            request.whitelisted = True
-            return
-        if self.if_match_whitelist == 'False':
-            request.whitelisted = False
-            return
-
-    def action_if_match_blacklist(self, request):
-        if self.if_match_blacklist is None:
-            request.blacklisted = False
-            return
-        if self.if_match_blacklist == 'True':
-            request.blacklisted = True
-            return
-        if self.if_match_blacklist == 'False':
-            request.blacklisted = False
-            return
-
-    # main action_if_match hook
-    def action_if_match(self, request):
-        for action in self.action_if_match_register:
-            getattr(self, action)(request)
-
-    def action_if_mismatch_set_tag(self, request):
-        if self.if_mismatch_set_tag is None:
-            return
-        for t in self.if_mismatch_set_tag:
-            request.tags.add(t)
-
-    def action_if_mismatch_unset_tag(self, request):
-        if self.if_mismatch_unset_tag is None:
-            return
-        for t in self.if_mismatch_unset_tag:
-            request.tags.discard(t)
-
-    def action_if_mismatch_whitelist(self, request):
-        if self.if_mismatch_whitelist is None:
-            request.whitelisted = False
-            return
-        if self.if_mismatch_whitelist == 'True':
-            request.whitelisted = True
-            return
-        if self.if_mismatch_whitelist == 'False':
-            request.whitelisted = False
-            return
-
-    def action_if_mismatch_blacklist(self, request):
-        if self.if_mismatch_blacklist is None:
-            request.blacklisted = False
-            return
-        if self.if_mismatch_blacklist == 'True':
-            request.blacklisted = True
-            return
-        if self.if_mismatch_blacklist == 'False':
-            request.blacklisted = False
-            return
-
-    # main action_if_mismatch hook
-    def action_if_mismatch(self, request):
-        for action in self.action_if_mismatch_register:
-            getattr(self, action)(request)
-
     def analyze(self, request):
         if not self.prerequisite(request):
             return
         if self.match(request):
-            self.action_if_match(request)
+            for action in self.action_if_match:
+                action.apply(request)
         else:
-            self.action_if_mismatch(request)
+            for action in self.action_if_mismatch:
+                action.apply(request)
