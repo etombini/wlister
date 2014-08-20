@@ -51,7 +51,7 @@ class AttributesTest(unittest.TestCase):
     def test_protocol_ko(self):
         t = telnetlib.Telnet('localhost', 80)
         t.write('GET /protocol/ HTTP/1.0\n')
-        #t.write('Host: localhost\n')
+        # t.write('Host: localhost\n')
         t.write('Accept: */*\n')
         t.write('Accept-Encoding: gzip,deflate,compress\n\n')
         r = t.read_all()
@@ -73,6 +73,18 @@ class AttributesTest(unittest.TestCase):
     def test_args_ko(self):
         r = requests.get("http://localhost/args/?var1=val1&var2=val2&var3=val3")
         self.assertEqual(r.status_code, 404)
+
+
+class PrerequisiteTest(unittest.TestCase):
+
+    def test_prerequisite_ko(self):
+        r = requests.get('http://localhost/never_matching_tag/')
+        self.assertEqual(r.status_code, 404)
+
+    def test_prerequisite_ok(self):
+        r = requests.get('http://localhost/matching_tag/')
+        self.assertEqual(r.status_code, 200)
+
 
 
 class ParametersTest(unittest.TestCase):
@@ -191,6 +203,9 @@ class HeadersTest(unittest.TestCase):
         t.close()
         self.assertEqual(int(r[9:12]), 404)
 
+    def test_headers_add_ok(self):
+        r = requests.get("http://localhost/set_header/")
+        self.assertEqual(r.status_code, 200)
 
 class JSONTest(unittest.TestCase):
 

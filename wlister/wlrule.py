@@ -16,6 +16,7 @@
 
 import wlmatch
 import wlactionif
+import wlprerequisite
 
 
 class WLRule(object):
@@ -28,6 +29,7 @@ class WLRule(object):
 
         self.action_if_match = []
         self.action_if_mismatch = []
+        self.prerequisite = []
 
         #oldies to be refactored
         self.prerequisite_register = []
@@ -67,9 +69,9 @@ class WLRule(object):
         if "action_if_match" in self.description:
             for a in self.description["action_if_match"]:
                 if a not in wlactionif.register:
-                    self.log("ERROR - " + str(m) + " is not a valid action function for action_if_match directive")
+                    self.log("ERROR - " + str(a) + " is not a valid action function for action_if_match directive")
                     continue
-                self.action_if_match.append(wlactionif.register[a](str(self._id) + "action_if_match" + str(a),
+                self.action_if_match.append(wlactionif.register[a](str(self._id) + ".action_if_match." + str(a),
                                                                    self.description["action_if_match"][a],
                                                                    self.log))
 
@@ -79,60 +81,28 @@ class WLRule(object):
                 if a not in wlactionif.register:
                     self.log("ERROR - " + str(m) + " is not a valid action function for action_if_mismatch directive")
                     continue
-                self.action_if_mismatch.append(wlactionif.register[a](str(self._id) + "action_if_mismatch" + str(a),
+                self.action_if_mismatch.append(wlactionif.register[a](str(self._id) + ".action_if_mismatch." + str(a),
                                                                       self.description["action_if_mismatch"][a],
                                                                       self.log))
-        self.register_prerequisite()
 
-    def register_prerequisite(self):
-        # prerequisites material and prerequisites_* function registration
-        if 'prerequisite' not in self.description:
-            return
-        self.has_tag = None
-        self.has_not_tag = None
-        if 'has_tag' in self.description['prerequisite']:
-            if type(self.description['prerequisite']['has_tag']) is list:
-                self.has_tag = self.description['prerequisite']['has_tag']
-            else:
-                self.has_tag = [self.description['prerequisite']['has_tag']]
-            self.prerequisite_register.append('prerequisite_has_tag')
+        # Prerequisite
+        if "prerequisite" in self.description:
+            for p in self.description["prerequisite"]:
+                if p not in wlprerequisite.register:
+                    self.log("ERROR - " + str(p) + " is not a valid prerequisite function")
+                    continue
+                self.prerequisite.append(wlprerequisite.register[p](str(self._id) + ".prerequisite." + str(p),
+                                                                    self.description["prerequisite"][p],
+                                                                    self.log))
 
-        if 'has_not_tag' in self.description['prerequisite']:
-            if type(self.description['prerequisite']['has_not_tag']) is list:
-                self.has_not_tag = \
-                    self.description['prerequisite']['has_not_tag']
-            else:
-                self.has_not_tag = \
-                    [self.description['prerequisite']['has_not_tag']]
-            self.prerequisite_register.append('prerequisite_has_not_tag')
 
-    # main match function
+
     # other match_* functions are not meant to be called
     def match(self, request):
         for m in self.matches:
             if not m.match(request):
                 return False
         return True
-
-    def prerequisite_has_tag(self, request):
-        if self.has_tag is None:
-            return True
-        has_tag = True
-        for tag in self.has_tag:
-            if tag not in request.tags:
-                has_tag = False
-                break
-        return has_tag
-
-    def prerequisite_has_not_tag(self, request):
-        if self.has_not_tag is None:
-            return True
-        has_not_tag = True
-        for tag in self.has_not_tag:
-            if tag in request.tags:
-                has_not_tag = False
-                break
-        return has_not_tag
 
     # main prerequisite validator
     def prerequisite(self, request):
@@ -142,8 +112,8 @@ class WLRule(object):
         return True
 
     def analyze(self, request):
-        if not self.prerequisite(request):
-            return
+#        if not self.prerequisite(request):
+#            return
         if self.match(request):
             for action in self.action_if_match:
                 action.apply(request)

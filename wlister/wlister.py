@@ -52,14 +52,14 @@ def init_rules():
         return
     apache.wl_rules = []
     if apache.wl_config.conf == '':
-        _syslog('No configuration file defined - ' +
+        _syslog('ERROR - No configuration file defined - ' +
                 'check [PythonOption wlister.conf filename] directive')
         return
     f = None
     try:
         f = open(apache.wl_config.conf)
     except:
-        _syslog('Can not open configuration file (wlister.conf) - ' +
+        _syslog('ERROR - Can not open configuration file (wlister.conf) - ' +
                 str(apache.wl_config.conf))
         return
     d = None
@@ -72,7 +72,7 @@ def init_rules():
                 j = j + l
         d = json.loads(j)
     except Exception as e:
-        _syslog('Rules format is not json compliant - ' +
+        _syslog('ERROR - Rules format is not json compliant - ' +
                 str(apache.wl_config.conf) + ' - ' +
                 str(e))
         return
@@ -123,18 +123,18 @@ def input_filter(filter):
     if not filter.is_input:
         return
 
-    filter.req.log_error('--------------- START OF FILTER -----------------',
-                         apache.APLOG_DEBUG)
+    # filter.req.log_error('--------------- START OF FILTER -----------------',
+    #                     apache.APLOG_DEBUG)
     # if there is a body content to forward...
     # if filter.req.body is not None:
     #    filter.write(filter.req.body)
     try:
         filter.write(filter.req.body)
-        _syslog("REQUEST BODY FOUND " + str(filter.req.body))
+        # _syslog("REQUEST BODY FOUND " + str(filter.req.body))
     except AttributeError:
         _syslog('request raw body is not defined')
     finally:
         filter.flush()
         filter.close()
-    filter.req.log_error('--------------- END OF FILTER -----------------',
-                         apache.APLOG_DEBUG)
+    # filter.req.log_error('--------------- END OF FILTER -----------------',
+    #                     apache.APLOG_DEBUG)

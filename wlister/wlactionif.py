@@ -16,6 +16,7 @@
 
 register = {}
 
+
 class WLActionIf(object):
     def __init__(self, name=None, log=None):
         self.name = str(name)
@@ -48,6 +49,7 @@ class WLWhitelist(WLActionIf):
 
 register["whitelist"] = WLWhitelist
 
+
 class WLBlacklist(WLActionIf):
     def __init__(self, name=None, parameters=None, log=None):
         WLActionIf.__init__(self, name, log)
@@ -66,6 +68,7 @@ class WLBlacklist(WLActionIf):
 
 register["blacklist"] = WLBlacklist
 
+
 class WLSetTag(WLActionIf):
     def __init__(self, name=None, parameters=None, log=None):
         WLActionIf.__init__(self, name, log)
@@ -80,6 +83,7 @@ class WLSetTag(WLActionIf):
             request.tags.add(t)
 
 register["set_tag"] = WLSetTag
+
 
 class WLUnsetTag(WLActionIf):
     def __init__(self, name=None, parameters=None, log=None):
@@ -97,4 +101,21 @@ class WLUnsetTag(WLActionIf):
 register["unset_tag"] = WLUnsetTag
 
 
+class WLSetHeader(WLActionIf):
+    def __init__(self, name=None, parameters=None, log=None):
+        WLActionIf.__init__(self, name, log)
+        if type(parameters) is not list:
+            self.log("ERROR - " + self.name +
+                     " - set_header parameter must be a list of string as in [\"x-specific-header\", \"header_value\"]")
+            raise ValueError
+        self.parameters = parameters
 
+    def apply(self, request):
+        try:
+            request.request.headers_in.add(self.parameters[0], self.parameters[1])
+            request.headers.append(self.parameters)
+        except Exception as e:
+            self.log("ERROR - " + self.name + " - Something wrong happened when adding new header \"" +
+                     str(self.parameters) + "\" > " + str(e))
+
+register["set_header"] = WLSetHeader

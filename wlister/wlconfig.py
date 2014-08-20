@@ -42,15 +42,15 @@ class WLConfig(object):
                     ['block', 'pass', 'logpass', 'logblock']:
                 self.default_action = options[WLACTION]
             else:
-                self.log('unknown value for ' + WLACTION +
+                self.log('WARNING - unknown value for ' + WLACTION +
                          ', set to block')
         else:
-            self.log(WLACTION + ' not defined, set to block')
+            self.log('WARNING - ' + WLACTION + ' not defined, set to block')
         if WLMAXPOST in options:
             self.max_post_read = options[WLMAXPOST]
         else:
             self.max_post_read = WLMAXPOST_VALUE
-            self.log('default request body to be read set to ' +
+            self.log('WARNING - default request body to be read set to ' +
                      str(WLMAXPOST_VALUE))
 
 
@@ -256,6 +256,12 @@ rules_schema = \
                     }
                 },
                 "unset_tag": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "set_header": {
                     "type": "array",
                     "items": {
                         "type": "string"

@@ -94,6 +94,7 @@ class WLMatchArgs(WLMatchAttribute):
 
 register["args"] = WLMatchArgs
 
+
 class WLMatchItems(WLMatcher):
 
     items = ["parameters", "headers", "content_url_encoded"]
@@ -102,7 +103,7 @@ class WLMatchItems(WLMatcher):
         WLMatcher.__init__(self, name=name, log=log)
         if item not in self.items:
             self.log('ERROR - ' + str(item) + " is not a valid keyword (parameters, headers, content_url_encoded)")
-            raise ValueException
+            raise ValueError
         self.item = item
         self.re_items = []
         self.re_len = 0
@@ -139,6 +140,7 @@ class WLMatchParameters(WLMatchItems):
 
 register["parameters"] = WLMatchParameters
 
+
 class WLMatchHeaders(WLMatchItems):
     """
     """
@@ -147,6 +149,7 @@ class WLMatchHeaders(WLMatchItems):
 
 register["headers"] = WLMatchHeaders
 
+
 class WLMatchContentURLEncoded(WLMatchItems):
     """
     """
@@ -154,6 +157,7 @@ class WLMatchContentURLEncoded(WLMatchItems):
         WLMatchItems.__init__(self, name, "content_url_encoded", regex, log)
 
 register["content_url_encoded"] = WLMatchContentURLEncoded
+
 
 class WLMatchContentJSON(WLMatcher):
 
@@ -172,6 +176,7 @@ class WLMatchContentJSON(WLMatcher):
 
 register["content_json"] = WLMatchContentJSON
 
+
 class WLMatchItemsIn(WLMatcher):
 
     items = ["parameters", "headers", "content_url_encoded"]
@@ -180,7 +185,7 @@ class WLMatchItemsIn(WLMatcher):
         WLMatcher.__init__(self, name=name, log=log)
         if item not in self.items:
             self.log("Error - " + str(item) + " is not a valid keyword (parameters, headers, content_url_encoded)")
-            raise ValueException
+            raise ValueError
         self.item = item
         self.re_items = []
         self.re_len = 0
@@ -198,8 +203,6 @@ class WLMatchItemsIn(WLMatcher):
         item = getattr(request, self.item)
         idx_re = 0
         for name, value in item:
-            #if self.re_items < name:
-            #    return False
             if name == self.re_items[idx_re][0] \
                     and self.re_items[idx_re][1].match(value):
                 idx_re = idx_re + 1
@@ -207,11 +210,13 @@ class WLMatchItemsIn(WLMatcher):
                 return True
         return False
 
+
 class WLMatchParametersIn(WLMatchItemsIn):
     def __init__(self, name=None, regex=None, log=None):
         WLMatchItemsIn.__init__(self, name, "parameters", regex, log)
 
 register["parameters_in"] = WLMatchParametersIn
+
 
 class WLMatchHeadersIn(WLMatchItemsIn):
     def __init__(self, name=None, regex=None, log=None):
@@ -219,11 +224,13 @@ class WLMatchHeadersIn(WLMatchItemsIn):
 
 register["headers_in"] = WLMatchHeadersIn
 
+
 class WLMatchContentURLEncodedIn(WLMatchItemsIn):
     def __init__(self, name=None, regex=None, log=None):
         WLMatchItemsIn.__init__(self, name, "content_url_encoded", regex, log)
 
 register["content_url_encoded_in"] = WLMatchContentURLEncodedIn
+
 
 class WLMatchItemsList(WLMatcher):
 
@@ -233,9 +240,9 @@ class WLMatchItemsList(WLMatcher):
         WLMatcher.__init__(self, name=name, log=log)
         if item not in self.items:
             self.log("Error - " + str(item) + " is not a valid keyword (parameters_list, headers_list, content_url_encodedi_list)")
-            raise ValueException
+            raise ValueError
         self.item = item
-        self.re_item = regex # which is a list of "items" ("parameters", "headers", "content_url_encoded")
+        self.re_item = regex  # which is a list of "items" ("parameters", "headers", "content_url_encoded")
 
     def match(self, request):
         if getattr(request, self.item) is None:
@@ -244,11 +251,13 @@ class WLMatchItemsList(WLMatcher):
         # lists are sorted
         return request_items == self.re_item
 
+
 class WLMatchParametersList(WLMatchItemsList):
     def __init__(self, name=None, regex=None, log=None):
         WLMatchItemsList.__init__(self, name, "parameters", regex, log)
 
 register["parameters_list"] = WLMatchParametersList
+
 
 class WLMatchHeadersList(WLMatchItemsList):
     def __init__(self, name=None, regex=None, log=None):
@@ -256,11 +265,13 @@ class WLMatchHeadersList(WLMatchItemsList):
 
 register["headers_list"] = WLMatchParametersList
 
+
 class WLMatchContentURLEncodedList(WLMatchItemsList):
     def __init__(self, name=None, regex=None, log=None):
         WLMatchItemsList.__init__(self, name, "content_url_encoded", regex, log)
 
 register["content_url_encoded_list"] = WLMatchContentURLEncodedList
+
 
 class WLMatchItemsListIn(WLMatcher):
 
@@ -270,7 +281,7 @@ class WLMatchItemsListIn(WLMatcher):
         WLMatcher.__init__(self, name=name, log=log)
         if item not in self.items:
             self.log("Error - " + str(item) + " is not a valid keyword (parameters_list_in, headers_list_in, content_url_encoded_list_in)")
-            raise ValueException
+            raise ValueError
         self.item = item
         self.re_items = sorted(regex)
         self.re_len = len(self.re_items)
@@ -287,11 +298,13 @@ class WLMatchItemsListIn(WLMatcher):
                 return True
         return False
 
+
 class WLMatchParametersListIn(WLMatchItemsListIn):
     def __init__(self, name=None, regex=None, log=None):
         WLMatchItemsListIn.__init__(self, name, "parameters", regex, log)
 
 register["parameters_list_in"] = WLMatchParametersListIn
+
 
 class WLMatchHeadersListIn(WLMatchItemsListIn):
     def __init__(self, name=None, regex=None, log=None):
@@ -299,11 +312,13 @@ class WLMatchHeadersListIn(WLMatchItemsListIn):
 
 register["headers_list_in"] = WLMatchHeadersListIn
 
+
 class WLMatchContentURLEncodedListIn(WLMatchItemsListIn):
     def __init__(self, name=None, regex=None, log=None):
         WLMatchItemsListIn.__init__(self, name, "content_url_encoded", regex, log)
 
 register["content_url_encoded_list_in"] = WLMatchContentURLEncodedListIn
+
 
 class WLMatchItemsAllUnique(WLMatcher):
 
@@ -313,14 +328,14 @@ class WLMatchItemsAllUnique(WLMatcher):
         WLMatcher.__init__(self, name=name, log=log)
         if item not in self.items:
             self.log("ERROR - " + str(self.name) + " - " + str(item) + " is not a valid keyword (parameters_list_in, headers_list_in, content_url_encoded_list_in)")
-            raise ValueException
+            raise ValueError
         if regex == "True":
             self.re_items = True
         elif regex == "False":
             self.re_items = False
         else:
             self.log("ERROR - " + str(self.name) + " - " + str(regex) + " is not a valid value (must be \"True\" or \"False\", with quotes)")
-            raise ValueException
+            raise ValueError
         self.item = item
 
     def match(self, request):
@@ -329,11 +344,13 @@ class WLMatchItemsAllUnique(WLMatcher):
         l = [name for name, value in getattr(request, self.item)]
         return self.re_items == (len(l) == len(set(l)))
 
+
 class WLMatchParametersAllUnique(WLMatchItemsAllUnique):
     def __init__(self, name=None, regex=None, log=None):
         WLMatchItemsAllUnique.__init__(self, name, "parameters", regex, log)
 
 register["parameters_all_unique"] = WLMatchParametersAllUnique
+
 
 class WLMatchHeadersAllUnique(WLMatchItemsAllUnique):
     def __init__(self, name=None, regex=None, log=None):
@@ -341,11 +358,13 @@ class WLMatchHeadersAllUnique(WLMatchItemsAllUnique):
 
 register["headers_all_unique"] = WLMatchHeadersAllUnique
 
+
 class WLMatchContentURLEncodedAllUnique(WLMatchItemsAllUnique):
     def __init__(self, name=None, regex=None, log=None):
         WLMatchItemsAllUnique.__init__(self, name, "content_url_encoded", regex, log)
 
 register["content_url_encoded_all_unique"] = WLMatchContentURLEncodedAllUnique
+
 
 class WLMatchItemsUnique(WLMatcher):
 
@@ -368,11 +387,13 @@ class WLMatchItemsUnique(WLMatcher):
                 return False
         return True
 
+
 class WLMatchParametersUnique(WLMatchItemsUnique):
     def __init__(self, name=None, regex=None, log=None):
         WLMatchItemsUnique.__init__(self, name, "parameters", regex, log)
 
 register["parameters_unique"] = WLMatchParametersUnique
+
 
 class WLMatchHeadersUnique(WLMatchItemsUnique):
     def __init__(self, name=None, regex=None, log=None):
@@ -380,10 +401,9 @@ class WLMatchHeadersUnique(WLMatchItemsUnique):
 
 register["headers_unique"] = WLMatchHeadersUnique
 
+
 class WLMatchContentURLEncodedUnique(WLMatchItemsUnique):
     def __init__(self, name=None, regex=None, log=None):
         WLMatchItemsUnique.__init__(self, name, "content_url_encoded", regex, log)
 
 register["content_url_encoded_unique"] = WLMatchContentURLEncodedUnique
-
-

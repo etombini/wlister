@@ -87,14 +87,14 @@ If all directives return ```True```, the rule processing jumps to ```action_if_m
         "method": "^(GET|HEAD)$",
         "protocol": "^HTTP/0\\.(1|0)$",
         "args": ".{1,256}",
-        "parameter": ["var1", "^val1$"],
         "parameters": [ ["var1", "^val1$"], ["var2", "^val2$"] ],
-        "parameter_list": ["var1", "var2", "var3"],
+        "parameters_all_unique": "True"
+        "parameter_list": [["var1", "var2", "var3"],
+        "parameter_list_in": ["var1", "var2"],
         "content_url_encoded": [ ["var1", "^val1$"], ["var2", "^val2$"] ]
     },  
 	[...]
 }  
-
 ```
 
 ### match - ```order```
@@ -113,60 +113,81 @@ There is a non matching directive named ```order```. It forces the matching dire
 
 As the global matching depends on specific directives, the earlier it fails, the faster the analysis goes, avoiding unnecessary matching directives. 
 
-### match - uri
+### match - ```uri```
 
 Use a regex to match the URI part of the HTTP request.
 
-### match - method
+### match - ```method```
 
 Use a regex to match the HTTP method used. 
 
-### match - protocol
+### match - ```protocol```
 
 Use a regex to match the HTTP protocol used (*i.e.* HTTP/1.1, HTTP/1.0 or HTTP/0.9).
 
-### match - host
+### match - ```host```
 
 Use a regex to match the host targeted by the HTTP request.
 
-### match - args
+### match - ```args```
 
 Use a regex to match HTTP request raw args (everything after the ```?```).
 
-### match - parameter
-
-Use a tuple (parameter, regex) to match a specific parameter in the HTTP request.
-
-### match - parameters
+### match - ```parameters``` | ```headers``` |  ```content_url_encoded```
 	
 Use a list of tuples (parameter, regex) to match all the parameters in the HTTP request.
 
 *Note*: all parameters must exist and match.
 
-### match - parameter_list
+### match - ```parameters_unique``` | ```headers_unique``` |  ```content_url_encoded_unique```
+
+List of parameters that must be unique in the HTTP request.
+
+### match - ```parameters_all_unique``` | ```headers_all_unique``` |  ```content_url_encoded_all_unique```
+
+All parameters must be unique in the HTTP request.
+
+```
+[...]
+	"match": {
+		"parameters_all_unique": "True"
+	},
+[...]
+```
+
+
+**Note** : HTTP headers must be considered with care. For example: 
+```
+Accept-Encoding: gzip, deflate, compress
+```
+means there are 3 instances of ```Accept-Encoding``` headers.
+
+
+### match - ```parameters_in``` | ```headers_in``` |  ```content_url_encoded_in```
+	
+Use a list of tuples (parameter, regex) that must match parameters in the HTTP request.
+
+### match - ```parameter_list``` | ```headers_list``` |  ```content_url_encoded_list```
 
 List of all parameters that must be in the HTTP request.
 
 *Note*: all parameters must exist.
 
-### match - content
+### match - ```parameter_list_in``` | ```headers_list_in``` |  ```content_url_encoded_list_in```
+
+List of parameters that must be in the HTTP request.
+
+### match - ```content```
 
 Use a regex to match the raw body of the HTTP request. 
 
 *Note*: There can be limitation on the size of readable body, depending on the configuration set up. 
 
-### match - content_url_encoded
-
-Same as ```match.parameters``` for URL encoded HTTP body. 
-
-*Note*: all parameters must exist and match.
-
 *Note*: There can be limitation on the size of readable body, depending on the configuration set up. 
-
 
 ## action_if_match
 
-Actions triggered if ```match``` returns ```True```.
+Actions triggered if all ```match``` directives return ```True```.
 
 
 ### action_if_match - set_tag
@@ -186,7 +207,7 @@ Unset a tag or a list of tags from the analyzed HTTP request.
 
 ### action_if_match - whitelist
 
-Set the ```whitelist``` to ```True``` or ```False``` to decide if the request is OK or blocked right away.
+Set the ```whitelist``` to ```True``` to decide if the request is OK thus ending the analysis (setting to ```False``` has no effect).
 
 ```
 {   
@@ -195,9 +216,36 @@ Set the ```whitelist``` to ```True``` or ```False``` to decide if the request is
     "action_if_match": { "whitelist": "True" }   
 }
 ```
+
+### action_if_match - blacklist
+
+Set the ```blacklist``` to ```True``` to decide if the request is not OK thus ending the analysis (setting to ```False``` has no effect). Apache then return a ```404 - Page Not Found``` error.
+ 
+```
+{   
+	"prerequisite": { "has_tag": "GET"}
+    "match": { "uri": "^/$" },  
+    "action_if_match": { "blacklistlist": "True" }   
+}
+```
+
+### action_if_match - ```set_header```
+
+Add a specific header to the incoming request, before it is sent to the backend. 
+
+```
+{	
+	"prerequisite": { "has_tag": "GET"}
+    "match": { "uri": "^/$" },  
+    "action_if_match": { 
+    	"set_header": ["x-wlister-fingerprint", "secret_fingeprint"] 
+    } }
+```
+
+**Note** : if the header already exists in the request, it creates a duplicate. 
+
 ## action_if_mismatch
 
-Actions triggered if ```match``` returns ```False```.
+Actions triggered if any ```match``` directive returns ```False```.
 
- ```set_tag```, ```unset_tag``` and ```whitelist``` have the same behavior as for ```action_if_match```.
-
+ ```action_if_match``` directives have the very same behavior and apply into this context.
