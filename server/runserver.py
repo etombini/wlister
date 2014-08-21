@@ -57,6 +57,7 @@ def index004():
 def index005():
     return "OK"
 
+
 @app.route('/matching_tag/')
 def index006():
     return "OK"
@@ -65,6 +66,12 @@ def index006():
 @app.route('/set_header/')
 def index007():
     return "OK"
+
+
+@app.route('/logging/', methods=['GET', 'POST'])
+def index008():
+    return "OK"
+
 
 @app.route('/int/<int:value>')
 def index01(value):

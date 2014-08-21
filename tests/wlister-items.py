@@ -86,7 +86,6 @@ class PrerequisiteTest(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
 
 
-
 class ParametersTest(unittest.TestCase):
 
     def test_parameters_ok_same_order(self):
@@ -207,6 +206,7 @@ class HeadersTest(unittest.TestCase):
         r = requests.get("http://localhost/set_header/")
         self.assertEqual(r.status_code, 200)
 
+
 class JSONTest(unittest.TestCase):
 
     def test_json_ok(self):
@@ -246,3 +246,15 @@ class JSONTest(unittest.TestCase):
         headers = {'content-type': 'application/json'}
         r = requests.post("http://localhost/content_json/", data=json.dumps(content), headers=headers)
         self.assertEqual(r.status_code, 404)
+
+
+class LogTest(unittest.TestCase):
+
+    def test_log_request(self):
+        r = requests.get("http://localhost/logging/?test=tata&test=toto")
+        self.assertEqual(r.status_code, 200)
+
+    def test_log_request_post(self):
+        content = {"var01": "val01", "var03": "val02"}
+        r = requests.post("http://localhost/logging/?test=tata&test=toto", data=content)
+        self.assertEqual(r.status_code, 200)

@@ -14,6 +14,8 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+import re
+
 register = {}
 
 
@@ -119,3 +121,67 @@ class WLSetHeader(WLActionIf):
                      str(self.parameters) + "\" > " + str(e))
 
 register["set_header"] = WLSetHeader
+
+
+class WLLog(WLActionIf):
+    re_header = re.compile("headers\[(?P<header_name>[^]]*)\]")
+    re_parameter = re.compile("parameters\[(?P<parameter_name>[^]]*)\]")
+    re_content_url_encoded = re.compile("content_url_encoded\[(?P<content_url_encoded_name>[^]]*)\]")
+
+    def __init__(self, name=None, parameters=None, log=None):
+        WLActionIf.__init__(self, name, log)
+        #self.log("DEBUG - logging > " + str(parameters))
+        if type(parameters) is not list:
+            self.log("ERROR - " + self.name +
+                     " - log parameter must be a list of list of string")
+            raise ValueError("log parameter must be a list of list of string")
+        for p in parameters:
+            if type(p) is not list:
+                self.log("ERROR - " + self.name +
+                         " - log parameter must be a list of list of string")
+                raise ValueError("log parameter must be a list of list of string")
+        self.parameters = parameters
+
+    def apply(self, request):
+        for log_directive in self.parameters:
+            log_line = [str(request.request_id)]
+            for p in log_directive:
+                if p[0] == "#":
+                    log_line.append(p[1:])
+                    continue
+                try:
+                    log_line.append(str(getattr(request, p)))
+                except AttributeError:
+                    m = self.re_header.match(p)
+                    if m:
+                        try:
+                            header_name = m.group("header_name")
+                            log_line.append(str([(name, value) for name, value in request.headers if name == header_name]))
+                        except Exception as e:
+                            self.log("ERROR - " + self.name +
+                                    " - can not find request header " + str(p) + " - " + str(e))
+                            log_line.append(p)
+                        continue
+                    m = self.re_parameter.match(p)
+                    if m:
+                        try:
+                            parameter_name = m.group("parameter_name")
+                            log_line.append(str([(name, value) for name, value in request.parameters if name == parameter_name]))
+                        except:
+                            self.log("ERROR - " + self.name +
+                                    " - can not find request parameter " + str(p))
+                            log_line.append(p)
+                        continue
+                    m = self.re_content_url_encoded.match(p)
+                    if m:
+                        try:
+                            content_url_encoded_name = m.group("content_url_encoded_name")
+                            log_line.append(str([(name, value) for name, value in request.content_url_encoded if name == content_url_encoded_name]))
+                        except Exception as e:
+                            self.log("ERROR - " + self.name +
+                                    " - can not find content_url_encoded parameter " + str(p) + " - " + str(e))
+                        continue
+            if len(log_line) > 1:
+                self.log(' '.join(log_line))
+
+register["log"] = WLLog

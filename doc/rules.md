@@ -39,16 +39,14 @@ Gathers all preconditions that has to be fulfilled to start using the signature/
 ### prerequisite - has_tag
 
  ```has_tag``` can be a list of string.
-True if the request has the mentioned set of tags (all must be in).
+Returns True if the request has the mentioned set of tags (all must be in).
 
 
 ### prerequisite - has_not_tag
 
  ```has_not_tag``` can be list of string.
-True if the request has any of the mentioned set of tags.
+Returns False if the request has any of the mentioned set of tags.
 
-
-**Example**
 
 ```
 {
@@ -185,12 +183,44 @@ Use a regex to match the raw body of the HTTP request.
 
 *Note*: There can be limitation on the size of readable body, depending on the configuration set up. 
 
+### match - ```content_json```
+
+Use a json schema to match json body content. 
+
+```
+{
+[...]
+    "match": {
+        "content_json": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "description": "Something you want to say about this rule",
+            "type": "object",
+            "required": ["var01", "var02"],
+            "additionalProperties": false,
+            "properties": {
+                 "var01": {
+                     "type": "string",
+                     "pattern": "^val01$"
+                 } ,
+                 "var02": {
+                     "type": "string",
+                     "pattern": "^val02$"
+                 }
+            }
+        }
+    }
+[...]
+}
+```
+
+**Note**: Can be done if and only if ```Content-Type``` is ```application/json```.
+
 ## action_if_match
 
 Actions triggered if all ```match``` directives return ```True```.
 
 
-### action_if_match - set_tag
+### action_if_match - ```set_tag```
 
 Associate a tag or a list of tags to the analyzed HTTP request. Such tags can be used by ```prerequisite.has_tag``` to decide if a rule has to be processed or not. 
 
@@ -201,11 +231,11 @@ Associate a tag or a list of tags to the analyzed HTTP request. Such tags can be
 }
 ```
 
-### action_if_match - unset_tag
+### action_if_match - ```unset_tag```
 
 Unset a tag or a list of tags from the analyzed HTTP request.
 
-### action_if_match - whitelist
+### action_if_match - ```whitelist```
 
 Set the ```whitelist``` to ```True``` to decide if the request is OK thus ending the analysis (setting to ```False``` has no effect).
 
@@ -217,7 +247,7 @@ Set the ```whitelist``` to ```True``` to decide if the request is OK thus ending
 }
 ```
 
-### action_if_match - blacklist
+### action_if_match - ```blacklist```
 
 Set the ```blacklist``` to ```True``` to decide if the request is not OK thus ending the analysis (setting to ```False``` has no effect). Apache then return a ```404 - Page Not Found``` error.
  
@@ -243,6 +273,50 @@ Add a specific header to the incoming request, before it is sent to the backend.
 ```
 
 **Note** : if the header already exists in the request, it creates a duplicate. 
+
+
+### action_if_match - ```log```
+
+Log request attributes using specific keywords:
+- keyword prefixed with # logs the keyword
+- matching directives logs corresponding matching directive (except ```content_json```)
+- logging specific parameter (resp. header, reps. URL-encoded parameter) is done using dictionary notation, *e.g* ```parameters[var01]``` (resp. ```headers[Accept-Encoding]```, resp. ```content_url_encoded[var01]```) 
+
+Each list is meant to log on one line, keywords being separated by a space ' '.
+
+
+
+```
+{
+    "action_if_match": {
+        "log": [ 
+            ["method", "uri", "protocol"],
+            ["headers"],
+            ["#Some string"],
+            ["headers[Accept]"],
+            ["headers[Accept-Encoding]"],
+            ["content_url_encoded[var01]"],
+            ["parameters[test]"],
+            ["content_url_encoded"],
+            ["content"]
+        ]
+    }
+}   
+```
+
+Log line are prefixed with a unique request id, being a key among several log lines.
+
+```
+Aug 21 15:09:12 wlister wlister: bp0Ofo/Uq68yP6BIvy16z POST /logging/ HTTP/1.1
+Aug 21 15:09:12 wlister wlister: bp0Ofo/Uq68yP6BIvy16z [['Accept', '*/*'], ['Accept-Encoding', 'gzip'], ['Accept-Encoding', 'deflate'], ['Accept-Encoding', 'compress'], ['Content-Length', '23'], ['Content-Length', '23'], ['Content-Type', 'application/x-www-form-urlencoded'], ['Host', 'localhost'], ['User-Agent', 'python-requests/2.2.0 CPython/2.7.3 Linux/3.8.0-29-generic']]
+Aug 21 15:09:12 wlister wlister: bp0Ofo/Uq68yP6BIvy16z Some string
+Aug 21 15:09:12 wlister wlister: bp0Ofo/Uq68yP6BIvy16z [('Accept', '*/*')]
+Aug 21 15:09:12 wlister wlister: bp0Ofo/Uq68yP6BIvy16z [('Accept-Encoding', 'gzip'), ('Accept-Encoding', 'deflate'), ('Accept-Encoding', 'compress')]
+Aug 21 15:09:12 wlister wlister: bp0Ofo/Uq68yP6BIvy16z [('var01', 'val01')]
+Aug 21 15:09:12 wlister wlister: bp0Ofo/Uq68yP6BIvy16z [('test', 'tata'), ('test', 'toto')]
+Aug 21 15:09:12 wlister wlister: bp0Ofo/Uq68yP6BIvy16z [['var01', 'val01'], ['var03', 'val02']]
+Aug 21 15:09:12 wlister wlister: bp0Ofo/Uq68yP6BIvy16z var03=val02&var01=val01
+```
 
 ## action_if_mismatch
 
