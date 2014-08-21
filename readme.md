@@ -4,6 +4,7 @@ Using ```wlister``` it is possible to apply both methods and to combine them at 
 
  ```wlister``` allows to describe interactions between the web application and the client, using each piece of a HTTP request and their combination as a potential validation point (URI, parameters, headers, content, method, protocol, ...).
 
+ ```wlister``` can be installed using PyPI: https://pypi.python.org/pypi/wlister
 
 # How it works
 
@@ -72,17 +73,11 @@ Rule pre-conditions, tagging and action if (mis)match imply only necessary rules
 
 # What is missing ?
 
-**Documentation** There are some stuff in ```doc/```. Rules documentation is outdated for sure. But what is implemented is tested so there are readable examples from  ```conf/rules.conf``` and ```tests/*.py```.
-
-**Logging** It exists but it is not nice enough. It can be very useful to have logging format used for advanced debug/configuration and logging format to raise an alert. Another format to... whatever. Logging facilities with formatting has to be implemented. 
+**Documentation** There are some stuff in ```doc/```. Rules documentation may be incomplete. But what is implemented is tested so there are readable examples from  ```conf/rules.conf``` and ```tests/*.py```.
 
 **Attack signatures** No signature here, but I guess mod_security signatures database can help.
 
-**Documentation** Rules file used for unit tests can really help, but all rule directives must be documented at some point.
-
 **Code review** One dev, one dev. But there are tests (see ```tests/*.py```)
-
-**Refactoring** Matching directives are hard coded. Having a new one means developing it and binding stuff through the code which is error prone. Someone will want a new one, so it'd better be easy.
 
 **Learning module** Inferring patterns, finding invariants/constants, ...
 
